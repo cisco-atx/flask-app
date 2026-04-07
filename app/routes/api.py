@@ -214,8 +214,11 @@ def load_blueprints():
                 **getattr(bp_cls, "meta", {}),
             }
 
-            if bp_id not in current_app.blueprints:
-                current_app.register_blueprint(bp_cls())
+            try:
+                if bp_id not in current_app.blueprints:
+                    current_app.register_blueprint(bp_cls())
+            except:
+                pass
 
         except Exception as e:
             logging.warning(f"Failed to load blueprint {bp_id}: {e}, skipping")
