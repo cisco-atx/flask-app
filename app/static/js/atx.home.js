@@ -770,10 +770,10 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             // Get current app from URL path
-            const currentAppId = window.location.pathname.split("/")[1];
+            currentAppUrl = `/${window.location.pathname.split("/")[1]}`;
 
             // Find selected app from URL, fallback to first app
-            const selectedApp = apps.find(app => app.id === currentAppId) || apps[0];
+            const selectedApp = apps.find(app => app.url_prefix === currentAppUrl) || apps[0];
 
             // Redirect from home page to first available app
             if (window.location.pathname === "/home") {
