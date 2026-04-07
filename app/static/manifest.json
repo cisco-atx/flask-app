@@ -1,0 +1,12 @@
+{
+  "name": "Atx",
+  "start_url": "/",
+  "display": "standalone",
+  "icons": [
+    {
+      "src": "/static/img/cisco.svg",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}

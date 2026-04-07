@@ -1,0 +1,12 @@
+flask
+gunicorn
+markdown
+requests
+openai
+dotenv
+sqlitedict
+keyring
+netmiko
+xlsxwriter
+xlrd
+git+https://wwwin-github.cisco.com/Netmig/netcore.git#egg=netcore

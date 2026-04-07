@@ -1,0 +1,68 @@
+{% extends "atx.html" %}
+
+{% block body %}
+
+<div class="login-register-container">
+    <div class="login-register-form">
+
+        <!-- Brand Logo and Name -->
+        <div class="brand-container">
+            <img src="{{ url_for('static', filename='img/cisco.svg') }}" class="brand-logo-png">
+            <div class="brand-name">ATX</div>
+            <p class="app-version">v{{ app_version }}</p>
+        </div>
+
+        <!-- Heading -->
+        <h3>Register</h3>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <ul class="flashes">
+            {% for category, message in messages %}
+                <li class="{{ category }}">
+                    <span class="material-icons">
+                        {% if category == 'success' %}check_circle
+                        {% elif category == 'warning' %}warning
+                        {% elif category == 'danger' %}error
+                        {% elif category == 'info' %}info
+                        {% endif %}
+                    </span>
+                    <span>{{ message }}</span>
+                </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        {% endwith %}
+
+        <!-- Registration Form -->
+        <form method="POST" action="{{ url_for('atx.render_register') }}">
+            <div class="form-group-column">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" style="width:100%;" required>
+            </div>
+            <div class="form-group-row">
+                <div class="form-group-column">
+                    <label for="firstname">First Name</label>
+                    <input type="text" id="firstname" name="firstname" style="width:100%;" required>
+                </div>
+                <div class="form-group-column">
+                    <label for="lastname">Last Name</label>
+                    <input type="text" id="lastname" name="lastname" style="width:100%;" required>
+                </div>
+            </div>
+            <div class="form-group-column">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" style="width:100%;" required>
+            </div>
+            <div class="form-group-column">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" style="width:100%;" required>
+            </div>
+            <button type="submit" style="width: 100px;">Register</button>
+        </form>
+        <p>Already have an account? <a href="{{ url_for('atx.render_login') }}">Login here</a></p>
+    </div>
+</div>
+
+{% endblock %}
