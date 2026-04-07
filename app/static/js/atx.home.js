@@ -763,7 +763,6 @@ document.addEventListener("DOMContentLoaded", () => {
             // No apps available
             if (!apps.length) {
                 applicationDropdownToggle.innerHTML = `
-                    <span class=&quot;material-icons application-dropdown-icon&quot; style=&quot;margin-right:8px;font-size:24px;&quot;>grid_view</span>
                     No app available
                 `;
                 return;
