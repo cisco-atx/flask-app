@@ -218,7 +218,6 @@ def load_blueprints():
                 current_app.register_blueprint(bp_cls())
 
         except Exception as e:
-            print(e)
             logging.warning(f"Failed to load blueprint {bp_id}: {e}, skipping")
 
     return jsonify(bps)
