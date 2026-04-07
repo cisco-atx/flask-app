@@ -168,7 +168,8 @@ document.addEventListener("DOMContentLoaded", () => {
                         id: app.id,
                         name: app.name,
                         version: app.version,
-                        description: app.description || ''
+                        description: app.description || '',
+                        url_prefix: app.url_prefix || ''
                     }));
                 }
             },
@@ -776,7 +777,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             // Redirect from home page to first available app
             if (window.location.pathname === "/home") {
-                window.location.href = `/${apps[0].id}`;
+                window.location.href = `${apps[0].url_prefix}`;
                 return;
             }
 
@@ -829,7 +830,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     applicationDropdownMenu.classList.remove("show");
 
                     // Navigate
-                    window.location.href = `/${app.id}`;
+                    window.location.href = `${app.url_prefix}`;
                 });
 
                 applicationDropdownMenu.appendChild(item);
