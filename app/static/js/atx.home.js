@@ -375,10 +375,12 @@ document.addEventListener("DOMContentLoaded", () => {
                             <span class="material-icons">person_edit</span>
                             <span>Change Role</span>
                         </button>
+                        ${AUTH_MODE === 'local' ? `
                         <button class="delete-user icon-text">
                             <span class="material-icons">delete</span>
                             <span>Delete</span>
                         </button>
+                         ` : ''}
                      </div>`
                 }
             ],

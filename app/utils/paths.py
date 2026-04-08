@@ -13,5 +13,5 @@ DB_DIR = os.path.join(HOME_DIR, "db")
 USERS_DIR = os.path.join(HOME_DIR, "users")
 
 # Database file paths
-BP_DB = os.path.join(DB_DIR, "blueprints")
-USERS_DB = os.path.join(DB_DIR, "users")
+BP_DB = os.path.join(DB_DIR, "blueprints.sqlite")
+USERS_DB = os.path.join(DB_DIR, "users.sqlite")

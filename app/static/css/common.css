@@ -627,6 +627,23 @@ form label {
   padding: 0;
 }
 
+.login-info {
+  display: flex;
+  align-items: center;
+}
+
+.login-mode-container {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+  align-items: center;
+  cursor: default;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 12px;
+}
+
+
 .login-register-form form {
   display: flex;
   flex-direction: column;

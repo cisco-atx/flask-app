@@ -105,9 +105,11 @@ def add_user():
             "username": payload.get("username"),
             "password": payload.get("password"),
             "role": payload.get("role"),
-            "firstname": payload.get("firstname"),
-            "lastname": payload.get("lastname"),
-            "email": payload.get("email"),
+            "profile": {
+                "firstname": payload.get("firstname"),
+                "lastname": payload.get("lastname"),
+                "email": payload.get("email")
+            }
         }
     )
 

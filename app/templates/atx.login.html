@@ -13,7 +13,28 @@
         </div>
 
         <!-- Heading -->
-        <h3>Login</h3>
+
+        <div class="login-info">
+            <h3>Login</h3>
+            <div class="login-mode-container">
+                Auth:
+                {% if auth_params.mode == "local" %}
+                <div title="Use your local application credentials to log in">
+                    Local
+                </div>
+
+                {% elif auth_params.mode == "ssh" %}
+                <div title="Login requires access to SSH host: {{ auth_params.host }}">
+                    SSH:{{ auth_params.host }}:22
+                </div>
+
+                {% elif auth_params.mode == "sso" %}
+                <div title="Login using your {{ auth_params.provider }} account">
+                    SSO: ({{ auth_params.sso_provider }})
+                </div>
+                {% endif %}
+            </div>
+        </div>
 
         <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -42,12 +63,23 @@
                 <input type="text" id="username" name="username" style="width:100%;" required>
             </div>
             <div class="form-group-column">
-                <label for="password">Password</label>
+                <label for="password">
+                    {% if auth_params.mode == "sso" %}
+                    Access Token
+                    {% else %}
+                    Password
+                    {% endif %}
+                </label>
                 <input type="password" id="password" name="password" style="width:100%;" required>
             </div>
             <button type="submit" style="width:80px;">Login</button>
         </form>
-        <p>Don't have an account? <a href="{{ url_for('atx.render_register') }}">Register here</a></p>
+        {% if auth_params.mode == "local" %}
+        <p>
+            Don't have an account?
+            <a href="{{ url_for('atx.render_register') }}">Register here</a>
+        </p>
+        {% endif %}
     </div>
 </div>
 

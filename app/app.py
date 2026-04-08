@@ -65,7 +65,7 @@ class FlaskApp(Flask):
 
     def setup_auth(self):
         """Initialize the authentication manager with the users database and configuration."""
-        self.auth = self.modules.AuthManager(users_db=self.users_db, base_dir=self.utils.USERS_DIR, mode=self.utils.AUTH_MODE)
+        self.auth = self.modules.AuthManager(users_db=self.users_db, base_dir=self.utils.USERS_DIR, mode=self.utils.AUTH_PARAMS.get("mode"))
         self.auth.setup_bootstrap_admin()
 
     def set_authenticated_user(self, username):
@@ -104,6 +104,7 @@ class FlaskApp(Flask):
         def inject_base_globals():
             return {
                 "app_version": self.utils.APP_VERSION,
+                "auth_params": self.utils.AUTH_PARAMS,
                 "deployment_stage": self.utils.DEPLOYMENT_STAGE
             }
 

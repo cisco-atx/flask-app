@@ -18,15 +18,34 @@ def render_login():
     Returns:
         HTTP Response: Redirects or renders the login template.
     """
+    auth_params = current_app.utils.AUTH_PARAMS
+
     if request.method == "POST":
         username = request.form["username"]
         password = request.form["password"]
 
-        if not current_app.auth.authenticate(username, password):
+        auth_kwargs = {}
+
+        if auth_params["mode"] == "ssh":
+            auth_kwargs["host"] = auth_params["host"]
+
+        elif auth_params["mode"] == "sso":
+            auth_kwargs["token"] = password
+            auth_kwargs["provider"] = auth_params.get("sso_provider")
+            password = None
+
+        success = current_app.auth.authenticate(
+            username=username,
+            password=password,
+            **auth_kwargs
+        )
+
+        if not success:
             flash("Invalid credentials", "danger")
             return redirect(url_for("atx.render_login"))
 
         current_app.set_authenticated_user(username)
+
         flash("Login successful!", "success")
         return redirect(url_for("atx.render_home"))
 
@@ -54,10 +73,8 @@ def render_register():
         ok, msg = current_app.auth.register(
             username=username,
             password=password,
-            email=email,
-            firstname=firstname,
-            lastname=lastname,
-            role="user"
+            role="user",
+            profile={"email": email, "firstname": firstname, "lastname": lastname}
         )
         if ok:
             flash("Registration successful! Please log in.", "success")

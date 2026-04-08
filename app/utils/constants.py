@@ -6,8 +6,7 @@ DEPLOYMENT_STAGE = "dev"
 AZURE_AI_ENV_PATH = os.path.join(os.path.expanduser("~"), ".atx", "azureai.env")
 SESSION_LIFETIME_MINUTES = 30
 SECRET_KEY = os.getenv("SECRET_KEY", "atx_secret")
-AUTH_MODE = os.getenv("AUTH_MODE", "local")
-AUTH_PARAMS = {}
+AUTH_PARAMS = {"mode": os.getenv("AUTH_MODE", "local")}
 
 # Endpoints that do not require user authentication.
 EXEMPT_ENDPOINTS = {

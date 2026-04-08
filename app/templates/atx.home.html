@@ -14,6 +14,7 @@
 <script>
     const CURRENT_USERNAME = "{{ session.get('username') }}";
     const CURRENT_USERROLE = "{{ session.get('userdata', {}).get('meta', {}).get('role') }}";
+    const AUTH_MODE = "{{ auth_params.mode }}";
 </script>
 
 {% endblock %}
@@ -150,10 +151,30 @@
                     </table>
                 </div>
                 <div class="app-modal-section" id="usersSection">
-                    <div style="display: flex; justify-content: flex-start;">
-                        <button class="icon-text superadmin-only" id="addUser">
-                            <span class="material-icons">person_add</span>Add User
-                        </button>
+                    <div style="display: flex; justify-content: flex-start; height: 30px;">
+                        {% if auth_params.mode == "local" %}
+                            <button class="icon-text superadmin-only" id="addUser">
+                                <span class="material-icons">person_add</span>Add User
+                            </button>
+                        {% endif %}
+                        <div class="login-mode-container">
+                            <div style="font-weight:600;">Auth:</div>
+                            {% if auth_params.mode == "local" %}
+                            <div title="Use your local application credentials to log in">
+                                Local
+                            </div>
+
+                            {% elif auth_params.mode == "ssh" %}
+                            <div title="Login requires access to SSH host: {{ auth_params.host }}">
+                                SSH:{{ auth_params.host }}:22
+                            </div>
+
+                            {% elif auth_params.mode == "sso" %}
+                            <div title="Login using your {{ auth_params.provider }} account">
+                                SSO: ({{ auth_params.sso_provider }})
+                            </div>
+                            {% endif %}
+                        </div>
                     </div>
                     <table class="display" id="userTable" style="width:100%">
                         <thead>
@@ -312,26 +333,29 @@
                                readonly>
                         <span></span>
                         <label>First Name</label>
-                        <input type="text" value="{{ session.get('userdata', {}).get('profile', {}).get('firstname') }}"
+                        <input type="text" value="{{ session.get('userdata', {}).get('profile', {}).get('firstname', '') }}"
                                name="firstname">
                         <span></span>
                         <label>Last Name</label>
-                        <input type="text" value="{{ session.get('userdata', {}).get('profile', {}).get('lastname') }}"
+                        <input type="text" value="{{ session.get('userdata', {}).get('profile', {}).get('lastname', '') }}"
                                name="lastname">
                         <span></span>
                         <label>Email</label>
-                        <input type="email" value="{{ session.get('userdata', {}).get('profile', {}).get('email') }}"
+                        <input type="email" value="{{ session.get('userdata', {}).get('profile', {}).get('email', '') }}"
                                name="email">
                         <span></span>
-                        <label>Change Password</label><input type="password" name="password" id="userPassword"
-                                                             placeholder="Enter new password (optional)">
-                        <button type="button" class="toggle-password icon-only" data-target="#userPassword">
-                            <span class="material-icons">visibility</span>
-                        </button>
-                        <span></span>
+                        {% if auth_params.mode == "local" %}
+                            <label>Change Password</label><input type="password" name="password" id="userPassword"
+                                                                 placeholder="Enter new password (optional)">
+                            <button type="button" class="toggle-password icon-only" data-target="#userPassword">
+                                <span class="material-icons">visibility</span>
+                            </button>
+                            <span></span>
+                        {% endif %}
                         <button type="submit" class="icon-text" style="width: 80px;">
                             <span class="material-icons">save</span>Save
                         </button>
+
                     </form>
                 </div>
                 <div class="app-modal-section" id="connectorsSection">
