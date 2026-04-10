@@ -13,6 +13,7 @@ EXEMPT_ENDPOINTS = {
     "atx.render_login",
     "atx.render_register",
     "atx.redirect_logout",
+    "atx.sse_activity",
     "static",
     "root",
 }

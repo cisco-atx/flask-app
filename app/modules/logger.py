@@ -1,24 +1,24 @@
 """
-Custom logging utilities for Netaudit.
+Production-ready logging utilities for ATX.
 
-This module provides a custom logging handler and logger that streams logs via a queue,
-with optional file logging and regex-based filtering. It can also capture root logs.
-
-Classes:
-- RegexFilter: A logging filter that excludes log records matching a given regex pattern.
-- QueueFileHandler: A custom logging handler that sends log records to a queue and optionally writes them to a file.
-- StreamLogger: A custom Logger for streaming logs via a queue, with optional file logging and regex-based filtering.
+This module provides:
+- structured JSON file logging
+- regex-based filtering
+- safe root logger attachment
+- multi-worker Gunicorn compatibility
+- SSE-friendly log file tailing support
 """
 
-import logging
-import re
-import queue
 import os
+import re
+import json
+import logging
+from datetime import datetime
 
 
 class RegexFilter(logging.Filter):
     """
-    Logging filter that excludes log records matching a given regex pattern.
+    Logging filter that excludes records matching a regex pattern.
     """
 
     def __init__(self, pattern=None):
@@ -28,119 +28,117 @@ class RegexFilter(logging.Filter):
     def filter(self, record):
         if not self.pattern:
             return True
-        return bool(not self.pattern.search(repr(record)))
+        return not bool(self.pattern.search(record.getMessage()))
 
 
-class QueueFileHandler(logging.Handler):
+class JsonFormatter(logging.Formatter):
     """
-    Custom logging handler that sends log records to a queue and optionally writes them to a file.
-    """
-
-    def __init__(self, log_queue, log_file=None, history_limit=1000):
-        """
-        Initializes the handler.
-
-        Args:
-            log_queue (queue.Queue): Queue to send log records to.
-            log_file (str, optional): Path to a log file. If provided, logs willalso be written to this file.
-            history_limit (int): Maximum number of log records to keep in history.
-        """
-        super().__init__()
-        self.log_queue = log_queue
-        self.log_file = log_file
-        self.history = []
-        self.history_limit = history_limit
-        self._file_handle = None
-
-        if self.log_file:
-            os.makedirs(os.path.dirname(log_file), exist_ok=True)
-            self._file_handle = open(log_file, "a", encoding="utf-8")
-
-    def emit(self, record):
-        """
-        Emit a log record.
-
-        Args:
-            record (logging.LogRecord): The log record to emit.
-        """
-        try:
-            formatted_record = self.format(record) if self.formatter else record.getMessage()
-            log_entry = {
-                "asctime": getattr(record, "asctime", ""),
-                "levelname": record.levelname,
-                "module": record.module,
-                "message": record.getMessage()
-            }
-
-            # Send to queue
-            self.log_queue.put(log_entry)
-
-            # Save to history
-            self.history.append(log_entry)
-            if len(self.history) > self.history_limit:
-                self.history.pop(0)
-
-            # Write to file if applicable
-            if self._file_handle:
-                self._file_handle.write(formatted_record + "\n")
-                self._file_handle.flush()
-
-        except Exception:
-            self.handleError(record)
-
-    def get_history(self):
-        """ Returns the history of log records."""
-        return self.history
-
-
-class StreamLogger(logging.Logger):
-    """
-    Custom Logger for streaming logs via a queue, with optional file logging
-    and regex-based filtering. Can also capture root logs.
+    Formats log records as JSON lines for easy SSE streaming and frontend parsing.
     """
 
-    def __init__(self,
-                 name,
-                 level=logging.INFO,
-                 filter_regex=None,
-                 log_file=None,
-                 history_limit=1000):
-        """ Initializes the StreamLogger.
+    def format(self, record):
+        log_entry = {
+            "timestamp": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
+            "levelname": record.levelname,
+            "module": record.module,
+            "message": record.getMessage()
+        }
 
-        Args:
-            name (str): Name of the logger.
-            level (int): Logging level.
-            filter_regex (str, optional): Regex pattern to filter out log records.
-            log_file (str, optional): Path to a log file. If provided, logs will also be written to this file.
-            history_limit (int): Maximum number of log records to keep in history.
-        """
+        return json.dumps(log_entry, ensure_ascii=False)
 
-        super().__init__(name, level)
+
+class StreamLogger:
+    """
+    Production-safe logger wrapper for file-based logging.
+
+    Designed for:
+    - Flask apps
+    - Gunicorn multi-worker deployments
+    - SSE log tail streaming
+    """
+
+    def __init__(
+        self,
+        name="atx_logger",
+        level=logging.INFO,
+        filter_regex=None,
+        log_file=None
+    ):
+        self.name = name
         self.level = level
-        self.log_queue = queue.Queue()
-        self.history_limit = history_limit
+        self.log_file = log_file
 
-        self.handlers.clear()
-        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
-        self.queuefile_handler = QueueFileHandler(self.log_queue, log_file, history_limit=history_limit)
-        self.queuefile_handler.setFormatter(formatter)
+        self.logger = logging.getLogger(name)
+        self.logger.setLevel(level)
+        self.logger.propagate = False
+
+        # Avoid duplicate handlers on reload / multiple imports
+        if not self.logger.handlers:
+            self._setup_handler(filter_regex)
+
+    def _setup_handler(self, filter_regex=None):
+        """
+        Creates and attaches file handler.
+        """
+        if not self.log_file:
+            raise ValueError("log_file path is required")
+
+        os.makedirs(os.path.dirname(self.log_file), exist_ok=True)
+
+        file_handler = logging.FileHandler(
+            self.log_file,
+            mode="a",
+            encoding="utf-8"
+        )
+
+        file_handler.setLevel(self.level)
+        file_handler.setFormatter(JsonFormatter())
 
         if filter_regex:
-            self.queuefile_handler.addFilter(RegexFilter(filter_regex))
+            file_handler.addFilter(RegexFilter(filter_regex))
 
-        # Attach handler to this logger
-        self.addHandler(self.queuefile_handler)
+        self.logger.addHandler(file_handler)
 
     def attach_root(self):
-        """ Attaches the handler to the root logger."""
+        """
+        Safely attach this logger's handlers to root logger.
+
+        Prevents duplicate handler registration.
+        """
         root_logger = logging.getLogger()
         root_logger.setLevel(self.level)
-        root_logger.addHandler(self.queuefile_handler)
 
-    def get_queue(self):
-        """ Returns the log queue."""
-        return self.log_queue
+        existing_handler_types = {
+            type(handler) for handler in root_logger.handlers
+        }
 
-    def get_history(self):
-        """ Returns the history of log records."""
-        return self.queuefile_handler.get_history()
+        for handler in self.logger.handlers:
+            if type(handler) not in existing_handler_types:
+                root_logger.addHandler(handler)
+
+    def get_logger(self):
+        """
+        Returns underlying Python logger instance.
+        """
+        return self.logger
+
+    def get_log_file(self):
+        """
+        Returns log file path.
+        """
+        return self.log_file
+
+    def info(self, message):
+        self.logger.info(message)
+
+    def warning(self, message):
+        self.logger.warning(message)
+
+    def error(self, message):
+        self.logger.error(message)
+
+    def debug(self, message):
+        self.logger.debug(message)
+
+    def critical(self, message):
+        self.logger.critical(message)

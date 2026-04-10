@@ -135,5 +135,6 @@ class FlaskApp(Flask):
                 flash("Session expired due to inactivity.", "info")
                 return redirect(url_for("atx.render_login"))
 
-        session["last_activity"] = now.isoformat()
+        if request.endpoint not in {"atx.activity", "static"}:
+            session["last_activity"] = now.isoformat()
         session.permanent = True
