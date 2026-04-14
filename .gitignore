@@ -21,6 +21,3 @@ Thumbs.db
 .idea/
 .vscode/
 *.iml
-
-# Blueprints
-/blueprints/

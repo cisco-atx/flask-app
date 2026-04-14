@@ -3,7 +3,11 @@
  * Handles the logger dock UI, log fetching, level filtering, and state persistence.
  */
 
-document.addEventListener("DOMContentLoaded", initLogger);
+let loggerEventSource;
+
+$(document).ready(function () {
+    initLogger();
+});
 
 /**
  * Initializes the logger dock and its associated functionality.
@@ -13,8 +17,6 @@ function initLogger() {
     const loggerToggle = document.getElementById("loggerToggle");
     const loggerDock = document.getElementById("loggerDock");
     const levelCheckboxes = document.querySelectorAll('.logger-filters .filter');
-
-    let loggerEventSource;
 
     if (!loggerOutput) return;
 
@@ -55,15 +57,36 @@ function initLogger() {
         * Starts a Server-Sent Events (SSE) connection to receive real-time log updates.
     */
     function startSSE() {
-        const loggerEventSource = new EventSource('/activity');
-        loggerEventSource.onmessage = function(event) {
-            const log = JSON.parse(event.data);
-            const selectedLevels = getSelectedLevels();
-            if (selectedLevels.includes(log.levelname)) {
-                renderLogRow(log);
-                autoScrollToBottom();
-            }
+        if (loggerEventSource) {
+            loggerEventSource.close();
+        }
+
+        loggerEventSource = new EventSource('/activity');
+
+        loggerEventSource.onmessage = updateUi;
+
+        loggerEventSource.onerror = () => {
+            console.warn("Logger stream disconnected");
+            loggerEventSource.close();
+
+            setTimeout(() => {
+                startSSE();
+            }, 3000);
         };
+    }
+
+    /**
+     * Updates the UI with new log entries received from the SSE connection.
+     * It checks if the log level matches the selected filters before rendering.
+     * @param {MessageEvent} event - The event containing the log data.
+     */
+    function updateUi(event) {
+        const log = JSON.parse(event.data);
+        const selectedLevels = getSelectedLevels();
+        if (selectedLevels.includes(log.levelname)) {
+            renderLogRow(log);
+            autoScrollToBottom();
+        }
     }
 
     /**

@@ -4,6 +4,7 @@ import importlib
 import json
 import logging
 import os
+import pkgutil
 import shutil
 import sys
 import tempfile
@@ -177,56 +178,68 @@ def delete_user():
 
 
 def load_blueprints():
-    """ Scans the blueprints directory for valid blueprints, registers them with the application, and returns their metadata. """
+    """Scan, validate, register blueprints and return metadata."""
     bps = {}
-    for bp_id in os.listdir(current_app.utils.BP_DIR):
-        bp_path = os.path.join(current_app.utils.BP_DIR, bp_id)
 
-        if not os.path.isdir(bp_path):
-            continue
+    bp_dir = current_app.utils.BP_DIR
+    base_dir = os.path.dirname(bp_dir)
 
-        init_py = os.path.join(bp_path, "__init__.py")
-        if not os.path.exists(init_py):
+    if base_dir not in sys.path:
+        sys.path.insert(0, base_dir)
+
+    for module_info in pkgutil.iter_modules([bp_dir]):
+        bp_id = module_info.name
+        bp_path = os.path.join(bp_dir, bp_id)
+
+        if not module_info.ispkg:
             continue
 
         try:
-            spec = importlib.util.spec_from_file_location(
-                f"blueprints.{bp_id}",
-                init_py,
-                submodule_search_locations=[bp_path]
-            )
-            module = importlib.util.module_from_spec(spec)
-            sys.modules[spec.name] = module
-            spec.loader.exec_module(module)
+            module = importlib.import_module(f"blueprints.{bp_id}")
             bp_cls = getattr(module, "BP_CLASS", None)
 
             if not bp_cls:
-                logging.warning(f"Blueprint {bp_id} does not define BP_CLASS, skipping")
+                logging.warning(
+                    "Blueprint %s does not define BP_CLASS, skipping",
+                    bp_id
+                )
                 continue
 
             try:
                 _validate_bp_class(bp_cls)
             except Exception as e:
-                logging.warning(f"Blueprint {bp_id} contract validation failed: {e}, skipping")
+                logging.warning(
+                    "Blueprint %s contract validation failed: %s, skipping",
+                    bp_id, e
+                )
                 continue
 
-            bps[bp_id] = {
+            bp = {
                 "id": bp_id,
                 "path": bp_path,
                 **getattr(bp_cls, "meta", {}),
             }
 
-            try:
-                if bp_id not in current_app.blueprints:
-                    current_app.register_blueprint(bp_cls())
-            except:
-                pass
+            bp_instance = bp_cls()
+
+            if bp_instance.name not in current_app.blueprints:
+                try:
+                    current_app.register_blueprint(bp_instance)
+                    logging.info("Blueprint registered: %s", bp_id)
+                except Exception as e:
+                    logging.error(
+                        "Failed to register blueprint %s: %s",
+                        bp_id, e
+                    )
+            bps[bp_id] = bp
 
         except Exception as e:
-            logging.warning(f"Failed to load blueprint {bp_id}: {e}, skipping")
+            logging.warning(
+                "Failed to load blueprint %s: %s, skipping",
+                bp_id, e
+            )
 
     return jsonify(bps)
-
 
 def get_blueprint_icon(blueprint_id):
     """ Retrieves the icon file for a specified blueprint. """
