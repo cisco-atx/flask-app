@@ -222,7 +222,7 @@ def load_blueprints():
 
             bp_instance = bp_cls()
 
-            if bp_instance.name not in current_app.blueprints:
+            if bp_instance.name not in current_app.blueprints and not current_app._got_first_request:
                 try:
                     current_app.register_blueprint(bp_instance)
                     logging.info("Blueprint registered: %s", bp_id)
