@@ -768,6 +768,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 applicationDropdownToggle.innerHTML = `
                     No app available
                 `;
+                document.querySelector(".layout-with-sidebar").style.display = "none";
                 return;
             }
 
