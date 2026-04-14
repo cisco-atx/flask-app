@@ -765,9 +765,7 @@ document.addEventListener("DOMContentLoaded", () => {
     loadBlueprintData()
         .then(data => {
             const allApps = Object.values(data);
-            console.log(allApps)
             const apps = allApps.filter(app => app.is_registered);
-            console.log(apps)
 
             // No apps available
             if (!apps.length) {

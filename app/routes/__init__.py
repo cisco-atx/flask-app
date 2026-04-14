@@ -32,6 +32,7 @@ from .login import (
     render_login,
     render_register,
     logout,
+    no_auth_required,
     login_required,
     admin_required,
     superadmin_required

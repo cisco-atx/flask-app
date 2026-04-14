@@ -109,8 +109,19 @@ class FlaskApp(Flask):
             }
 
     def enforce_session_policies(self):
+        endpoint = request.endpoint
+
         # Skip checks for exempt endpoints
-        if request.endpoint in self.utils.EXEMPT_ENDPOINTS:
+        if endpoint in self.utils.EXEMPT_ENDPOINTS:
+            return
+
+        # Skip for [".css", ".js", ".ico", ".png", ".jpg", ".jpeg", ".svg"]
+        if any(request.path.endswith(ext) for ext in [".css", ".js", ".ico", ".png", ".jpg", ".jpeg", ".svg"]):
+            return
+
+        # Check if the view function has an attribute 'is_public' set to True, which indicates it does not require authentication
+        view_func = self.view_functions.get(endpoint)
+        if view_func and getattr(view_func, "is_public", False):
             return
 
         # Server restart detection

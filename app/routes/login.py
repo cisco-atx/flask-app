@@ -102,6 +102,16 @@ def logout():
     return redirect(url_for("atx.render_login"))
 
 
+def no_auth_required(f):
+    """Decorator to mark routes as not requiring authentication."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        return f(*args, **kwargs)
+
+    decorated_function.is_public = True
+    return decorated_function
+
+
 def login_required(f):
     """
     Decorator to enforce login for protected routes.
