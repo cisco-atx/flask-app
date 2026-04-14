@@ -180,10 +180,8 @@ def delete_user():
 def load_blueprints():
     """Scan, validate, register blueprints and return metadata."""
     bps = {}
-
     bp_dir = current_app.utils.BP_DIR
     base_dir = os.path.dirname(bp_dir)
-
     if base_dir not in sys.path:
         sys.path.insert(0, base_dir)
 
@@ -208,10 +206,7 @@ def load_blueprints():
             try:
                 _validate_bp_class(bp_cls)
             except Exception as e:
-                logging.warning(
-                    "Blueprint %s contract validation failed: %s, skipping",
-                    bp_id, e
-                )
+                logging.warning("Blueprint %s contract validation failed: %s, skipping", bp_id, e)
                 continue
 
             bp = {
@@ -222,7 +217,7 @@ def load_blueprints():
 
             bp_instance = bp_cls()
 
-            if bp_instance.name not in current_app.blueprints and not current_app._got_first_request:
+            if not current_app._got_first_request:
                 try:
                     current_app.register_blueprint(bp_instance)
                     logging.info("Blueprint registered: %s", bp_id)
@@ -231,15 +226,16 @@ def load_blueprints():
                         "Failed to register blueprint %s: %s",
                         bp_id, e
                     )
+            bp["is_registered"] = current_app.blueprints.get(bp_instance.name) is not None
             bps[bp_id] = bp
 
         except Exception as e:
-            logging.warning(
-                "Failed to load blueprint %s: %s, skipping",
-                bp_id, e
-            )
+            logging.warning("Failed to load blueprint %s: %s, skipping", bp_id, e)
 
+        current_app.bp_db.clear()
+        current_app.bp_db.update(bps)
     return jsonify(bps)
+
 
 def get_blueprint_icon(blueprint_id):
     """ Retrieves the icon file for a specified blueprint. """

@@ -137,7 +137,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const closeAdminModal = document.getElementById('closeAdminModal');
 
     safeAddListener(closeAdminModal, 'click', () => {
-      adminModal.style.display = 'none';
+        if (applicationTable && !applicationTable.data().any()) {
+            window.location.href = '/home';
+        }
+        adminModal.style.display = 'none';
     });
 
     safeAddListener(administration, 'click', () => {
@@ -761,14 +764,25 @@ document.addEventListener("DOMContentLoaded", () => {
     // Fetch applications
     loadBlueprintData()
         .then(data => {
-            const apps = Object.values(data);
+            const allApps = Object.values(data);
+            console.log(allApps)
+            const apps = allApps.filter(app => app.is_registered);
+            console.log(apps)
 
             // No apps available
             if (!apps.length) {
                 applicationDropdownToggle.innerHTML = `
                     No app available
                 `;
-                document.querySelector(".layout-with-sidebar").style.display = "none";
+                document.getElementById("applicationDropdownMenu").style.display = "none";
+                document.getElementById("mainLayoutContent").innerHTML = `
+                    <div style="text-align:center;margin-top:50px;color:var(--text-secondary);">
+                        <span class="material-icons" style="font-size:48px;">apps_outage</span>
+                        <h2>No applications found</h2>
+                        <p>Please contact your administrator.</p>
+                    </div>
+                `;
+                document.querySelector(".logger-dock").style.left = "0";
                 return;
             }
 
@@ -777,12 +791,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
             // Find selected app from URL, fallback to first app
             const selectedApp = apps.find(app => app.url_prefix === currentAppUrl) || apps[0];
-
-            // Redirect from home page to first available app
-            if (window.location.pathname === "/home") {
-                window.location.href = `${apps[0].url_prefix}`;
-                return;
-            }
 
             // Set selected app in toggle button
             applicationDropdownToggle.innerHTML = `
@@ -838,6 +846,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 applicationDropdownMenu.appendChild(item);
             });
+
+            // Redirect from home page to first available app
+            if (window.location.pathname === "/home") {
+                window.location.href = `${apps[0].url_prefix}`;
+                return;
+            }
+
         })
         .catch(error => {
             console.error("Error loading blueprints:", error);

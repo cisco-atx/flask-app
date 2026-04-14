@@ -46,7 +46,7 @@
 <main id="mainLayout">
 
     <!-- Content -->
-    <div class="content">
+    <div class="content" id="mainLayoutContent">
         {% block full_content %}
             <div class="layout-with-sidebar">
                 <div class="sidebar open" id="sidebar">
@@ -207,6 +207,10 @@
         </div>
 
         <div class="simple-modal-body">
+            <div class="badge" style="font-size: 11px; margin-bottom: 10px; color: var(--text-muted);">
+                <span class="material-icons">warning</span>
+                Note: The application will be registered only after reloading the flask server.
+            </div>
             <form id="appModalForm">
                 <div class="form-grid" style="grid-template-columns: max-content 1fr auto;">
                     <label style="width: 90px;">File Directory</label>
