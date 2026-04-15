@@ -42,10 +42,13 @@ class FlaskApp(Flask):
 
     def setup_server_instance(self):
         """Ensure a unique server instance ID is set for session management and restart detection."""
-        if not os.environ.get("ATX_SERVER_INSTANCE_ID"):
-            os.environ["ATX_SERVER_INSTANCE_ID"] = uuid.uuid4().hex
+        # Write a uuid into a file to identify this server instance for session management and restart detection across multiple gunicorn workers
+        if not os.path.exists(self.utils.SERVER_INSTANCE_FILE):
+            with open(self.utils.SERVER_INSTANCE_FILE, "w") as f:
+                f.write(str(uuid.uuid4()))
 
-        self.server_instance_id = os.environ["ATX_SERVER_INSTANCE_ID"]
+        with open(self.utils.SERVER_INSTANCE_FILE, "r") as f:
+            self.server_instance_id = f.read().strip()
 
     def setup_directories(self):
         """Ensure necessary directories exist."""
