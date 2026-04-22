@@ -1,13 +1,28 @@
+"""Utility module for managing application file system paths.
+
+This module defines constants for important directories and file paths
+used throughout the application, including user data storage, database
+locations, and configuration files. It centralizes path construction to
+ensure consistency across the project.
+
+File path: app/utils/paths.py
+"""
+
 import os
 
 # Application directory
-APP_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+APP_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..")
+)
 
 # User's home directory for application data
 HOME_DIR = os.path.join(os.path.expanduser("~"), ".atx")
+
 GLOBAL_LOGGER = os.path.join(HOME_DIR, "logger.log")
 CIPHER_KEY = os.path.join(HOME_DIR, "cipher.key")
-SERVER_INSTANCE_FILE = os.path.join(HOME_DIR, "server_instance_id.uuid")
+SERVER_INSTANCE_FILE = os.path.join(
+    HOME_DIR, "server_instance_id.uuid"
+)
 PROJECT_DIR = os.path.join(HOME_DIR, "projects")
 DB_DIR = os.path.join(HOME_DIR, "db")
 USERS_DIR = os.path.join(HOME_DIR, "users")

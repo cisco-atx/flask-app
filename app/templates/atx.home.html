@@ -1,68 +1,117 @@
 {% extends "atx.html" %}
 
 {% block head %}
+<!-- ===================== -->
 <!-- Stylesheets -->
+<!-- ===================== -->
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.5/css/jquery.dataTables.min.css"/>
 <link rel="stylesheet" id="stylesheet" href="{{ url_for('static', filename='css/common.css') }}">
 
-<!-- JavaScript -->
+<!-- ===================== -->
+<!-- JavaScript Libraries -->
+<!-- ===================== -->
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.5/js/jquery.dataTables.min.js"></script>
+
+<!-- ===================== -->
+<!-- Application Scripts -->
+<!-- ===================== -->
 <script src="{{ url_for('static', filename='js/atx.home.js') }}"></script>
 <script src="{{ url_for('static', filename='js/atx.logger.js') }}"></script>
+
+<!-- ===================== -->
+<!-- Global Runtime Variables -->
+<!-- ===================== -->
 <script>
     const CURRENT_USERNAME = "{{ session.get('username') }}";
     const CURRENT_USERROLE = "{{ session.get('userdata', {}).get('meta', {}).get('role') }}";
     const AUTH_MODE = "{{ auth_params.mode }}";
 </script>
-
 {% endblock %}
 
 {% block body %}
 
-<!-- Top navigation bar -->
-<div class="topbar">
-    <div class="brand-container" onclick="window.location.href='{{ url_for('atx.render_home') }}'">
+<!-- ===================== -->
+<!-- Top Navigation Bar -->
+<!-- ===================== -->
+<header class="topbar">
+    <!-- Branding / Logo -->
+    <div
+            class="brand-container"
+            onclick="window.location.href='{{ url_for('atx.render_home') }}'"
+    >
         <div class="brand-logo-png"></div>
         <div class="brand-name">ATX</div>
     </div>
+
+    <!-- Application Version -->
     <span class="app-version" style="margin-top:8px;">v{{ app_version }}</span>
+
+    <!-- Application Switcher Dropdown -->
     <div class="application-dropdown" id="applicationDropdown">
-        <button class="application-dropdown-toggle rounded" id="applicationDropdownToggle"></button>
-        <div class="application-dropdown-menu" id="applicationDropdownMenu"></div>
+        <button
+                class="application-dropdown-toggle rounded"
+                id="applicationDropdownToggle"
+        ></button>
+        <div
+                class="application-dropdown-menu"
+                id="applicationDropdownMenu"
+        ></div>
     </div>
+
+    <!-- Topbar Action Buttons -->
     <div class="actions">
+        <!-- Theme Toggle -->
         <button class="rounded" id="themeToggle">
-            <span class="material-icons">{{ 'dark_mode' if session.get('userdata', {}).get('theme', 'light') == 'dark' else 'light_mode' }}</span>
+        <span class="material-icons">
+          {{ 'dark_mode' if session.get('userdata', {}).get('theme', 'light') == 'dark' else 'light_mode' }}
+        </span>
         </button>
+
+        <!-- User Menu Toggle -->
         <button class="rounded" id="userMenuToggle">
             <span class="material-icons">account_circle</span>
         </button>
     </div>
-</div>
+</header>
 
-<!-- Main content area -->
+<!-- ===================== -->
+<!-- Main Layout Container -->
+<!-- ===================== -->
 <main id="mainLayout">
 
-    <!-- Content -->
-    <div class="content" id="mainLayoutContent">
+    <!-- ===================== -->
+    <!-- Primary Content Area -->
+    <!-- ===================== -->
+    <section class="content" id="mainLayoutContent">
         {% block full_content %}
-            <div class="layout-with-sidebar">
-                <div class="sidebar open" id="sidebar">
-                {% block sidebar %}{% endblock %}
-                </div>
-                <button class="sidebar-toggle" id="sidebarToggle">
-                    <span class="material-icons">chevron_left</span>
-                </button>
-                <div class="main-content" id="mainContent">
-                {% block main %}{% endblock %}
-                </div>
-            </div>
-        {% endblock %}
-    </div>
+        <div class="layout-with-sidebar">
 
-    <!-- Logger -->
-    <div class="logger-dock" id="loggerDock">
+            <!-- Sidebar Navigation -->
+            <aside class="sidebar open" id="sidebar">
+                {% block sidebar %}{% endblock %}
+            </aside>
+
+            <!-- Sidebar Toggle Button -->
+            <button class="sidebar-toggle" id="sidebarToggle">
+                <span class="material-icons">chevron_left</span>
+            </button>
+
+            <!-- Main Content Section -->
+            <section class="main-content" id="mainContent">
+                {% block main %}{% endblock %}
+            </section>
+
+        </div>
+        {% endblock %}
+    </section>
+
+    <!-- ===================== -->
+    <!-- Logger Dock Panel -->
+    <!-- ===================== -->
+    <section class="logger-dock" id="loggerDock">
+
+        <!-- Logger Header with Filters -->
         <div class="logger-header">
             <div class="logger-filters" id="loggerFilters">
                 <label><input type="checkbox" class="filter" value="ERROR" checked> ERROR</label>
@@ -72,6 +121,8 @@
                 <label><input type="checkbox" class="filter" value="DEBUG"> DEBUG</label>
             </div>
         </div>
+
+        <!-- Logger Table -->
         <div class="logger-table">
             <table id="loggerTable">
                 <thead>
@@ -85,58 +136,105 @@
                 <tbody></tbody>
             </table>
         </div>
-    </div>
+    </section>
+
+    <!-- Logger Toggle Button -->
     <button class="logger-toggle icon-text" id="loggerToggle">
         <span class="material-icons">keyboard_arrow_up</span>
         <span>Logger</span>
     </button>
+
 </main>
 
-<!-- User popup menu -->
-<div class="user-popup-menu" id="userPopupMenu">
+<!-- ===================== -->
+<!-- User Popup Menu -->
+<!-- ===================== -->
+<nav class="user-popup-menu" id="userPopupMenu">
+
+    <!-- Administration (Admin Only) -->
     <div class="menu-item admin-only" id="administration">
         <span class="material-icons">admin_panel_settings</span>
         <span>Administration</span>
     </div>
+
+    <!-- User Account -->
     <div class="menu-item" id="userAccount">
         <span class="material-icons">manage_accounts</span>
         <span>My Account</span>
     </div>
-    <div class="menu-item" onclick="window.location.href='{{ url_for('atx.redirect_logout') }}'">
+
+    <!-- Logout -->
+    <div
+            class="menu-item"
+            onclick="window.location.href='{{ url_for('atx.redirect_logout') }}'"
+    >
         <span class="material-icons">logout</span>
         <span>Logout</span>
     </div>
-</div>
 
-<!-- Administration modal -->
+</nav>
+
+<!-- ===================== -->
+<!-- Administration Modal -->
+<!-- ===================== -->
 <div class="app-modal-overlay admin-only" id="adminModal">
     <div class="app-modal-container">
+
+        <!-- Sidebar Menu inside Modal -->
         <div class="app-modal-menu">
             <h4 class="app-modal-title">Administration</h4>
-            <div class="menu-item active" data-id="applications" data-title="Applications">
+
+            <!-- Applications Tab -->
+            <div
+                    class="menu-item active"
+                    data-id="applications"
+                    data-title="Applications"
+            >
                 <span class="material-icons">app_registration</span>
                 <span>Applications</span>
             </div>
-            <div class="menu-item " data-id="users" data-title="Users">
+
+            <!-- Users Tab -->
+            <div
+                    class="menu-item"
+                    data-id="users"
+                    data-title="Users"
+            >
                 <span class="material-icons">settings_account_box</span>
                 <span>Users</span>
             </div>
         </div>
+
+        <!-- Modal Content Area -->
         <div class="app-modal-content">
+
+            <!-- Modal Header -->
             <div class="app-modal-content-header">
                 <h4 class="app-modal-section-title" id="adminContentTitle">Users</h4>
                 <button class="close" id="closeAdminModal">
                     <span class="material-icons">close</span>
                 </button>
             </div>
+
             <hr>
+
+            <!-- Modal Body -->
             <div class="app-modal-content-body">
-                <div class="app-modal-section active" id="applicationsSection">
+
+                <!-- ===================== -->
+                <!-- Applications Section -->
+                <!-- ===================== -->
+                <section class="app-modal-section active" id="applicationsSection">
+
+                    <!-- Add Application Button -->
                     <div style="display: flex; justify-content: flex-start;">
                         <button class="icon-text" id="addApplication">
-                            <span class="material-icons">contextual_token_add</span>Add Application
+                            <span class="material-icons">contextual_token_add</span>
+                            Add Application
                         </button>
                     </div>
+
+                    <!-- Applications Table -->
                     <table class="display" id="applicationTable" style="width:100%">
                         <thead>
                         <tr>
@@ -148,16 +246,29 @@
                         </thead>
                         <tbody></tbody>
                     </table>
-                </div>
-                <div class="app-modal-section" id="usersSection">
+
+                </section>
+
+                <!-- ===================== -->
+                <!-- Users Section -->
+                <!-- ===================== -->
+                <section class="app-modal-section" id="usersSection">
+
+                    <!-- User Actions & Auth Info -->
                     <div style="display: flex; justify-content: flex-start; height: 30px;">
+
                         {% if auth_params.mode == "local" %}
-                            <button class="icon-text superadmin-only" id="addUser">
-                                <span class="material-icons">person_add</span>Add User
-                            </button>
+                        <!-- Add User Button (Local Auth Only) -->
+                        <button class="icon-text superadmin-only" id="addUser">
+                            <span class="material-icons">person_add</span>
+                            Add User
+                        </button>
                         {% endif %}
+
+                        <!-- Authentication Mode Display -->
                         <div class="login-mode-container">
                             <div style="font-weight:600;">Auth:</div>
+
                             {% if auth_params.mode == "local" %}
                             <div title="Use your local application credentials to log in">
                                 Local
@@ -174,7 +285,10 @@
                             </div>
                             {% endif %}
                         </div>
+
                     </div>
+
+                    <!-- Users Table -->
                     <table class="display" id="userTable" style="width:100%">
                         <thead>
                         <tr>
@@ -188,16 +302,22 @@
                         </thead>
                         <tbody></tbody>
                     </table>
-                </div>
+
+                </section>
+
             </div>
         </div>
     </div>
 </div>
 
-<!-- Add Modal -->
+
+<!-- ===================== -->
+<!-- Application Modal (Add Application) -->
+<!-- ===================== -->
 <div id="appModalOverlay" class="simple-modal-overlay">
     <div class="simple-modal-container" style="width: 800px;">
 
+        <!-- Modal Header -->
         <div class="simple-modal-header">
             <h5 class="simple-modal-title" id="appModalTitle">Add Application</h5>
             <button class="close" id="appCloseModalBtn">
@@ -205,168 +325,307 @@
             </button>
         </div>
 
+        <!-- Modal Body -->
         <div class="simple-modal-body">
-            <div class="badge" style="font-size: 11px; margin-bottom: 10px; color: var(--text-muted);">
+
+            <!-- Informational Note -->
+            <div
+                    class="badge"
+                    style="font-size: 11px; margin-bottom: 10px; color: var(--text-muted); text-transform: none;"
+            >
                 <span class="material-icons">warning</span>
                 Note: The application will be registered only after reloading the flask server.
             </div>
+
+            <!-- Application Form -->
             <form id="appModalForm">
                 <div class="form-grid" style="grid-template-columns: max-content 1fr auto;">
+
+                    <!-- File Directory Input -->
                     <label style="width: 90px;">File Directory</label>
                     <input type="text" id="appDir" placeholder="/path/to/app-directory">
-                    <button style="width: 100px;" type="button" id="uploadAppBtn" class="icon-text">
-                        <span class="material-icons">upload</span> Upload
+
+                    <!-- Upload Button -->
+                    <button
+                            style="width: 100px;"
+                            type="button"
+                            id="uploadAppBtn"
+                            class="icon-text"
+                    >
+                        <span class="material-icons">upload</span>
+                        Upload
                     </button>
+
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<!-- Add user modal -->
+<!-- ===================== -->
+<!-- Add User Modal -->
+<!-- ===================== -->
 <div class="simple-modal-overlay superadmin-only" id="addUserModalOverlay">
     <div class="simple-modal-container" style="width: 500px;">
+
+        <!-- Modal Header -->
         <div class="simple-modal-header">
             <h5 class="simple-modal-title">Add User</h5>
             <button class="close" id="closeAddUserModal">
                 <span class="material-icons">close</span>
             </button>
         </div>
+
+        <!-- Modal Body -->
         <div class="simple-modal-body">
-            <form class="form-grid" id="addUserForm" style="grid-template-columns: max-content 1fr auto;">
+            <form
+                    class="form-grid"
+                    id="addUserForm"
+                    style="grid-template-columns: max-content 1fr auto;"
+            >
+
+                <!-- Username -->
                 <label>Username</label>
                 <input type="text" id="newUsername" required>
                 <span></span>
+
+                <!-- First Name -->
                 <label>First Name</label>
                 <input type="text" id="newFirstName" required>
                 <span></span>
+
+                <!-- Last Name -->
                 <label>Last Name</label>
                 <input type="text" id="newLastName" required>
                 <span></span>
+
+                <!-- Email -->
                 <label>Email</label>
                 <input type="email" id="newEmail" required>
                 <span></span>
+
+                <!-- Password -->
                 <label>Password</label>
                 <input type="password" id="newPassword" required>
-                <button type="button" class="toggle-password icon-only" data-target="#newPassword">
+                <button
+                        type="button"
+                        class="toggle-password icon-only"
+                        data-target="#newPassword"
+                >
                     <span class="material-icons">visibility</span>
                 </button>
+
+                <!-- Role Selection -->
                 <label>Role</label>
                 <div style="display: flex; align-items: center; gap: 20px; padding: 6px;">
-                    <label><input type="radio" name="role" value="user" checked>User</label>
-                    <label><input type="radio" name="role" value="admin">Admin</label>
-                    <label style="white-space:nowrap;"><input type="radio" name="role" value="superadmin">Super
-                        Admin</label>
+                    <label><input type="radio" name="role" value="user" checked> User</label>
+                    <label><input type="radio" name="role" value="admin"> Admin</label>
+                    <label style="white-space:nowrap;">
+                        <input type="radio" name="role" value="superadmin"> Super Admin
+                    </label>
                 </div>
                 <span></span>
+
             </form>
         </div>
+
+        <!-- Modal Footer -->
         <div class="simple-modal-footer">
             <button type="submit" class="icon-text" form="addUserForm">
-                <span class="material-icons button">save</span>Save
+                <span class="material-icons button">save</span>
+                Save
             </button>
         </div>
     </div>
 </div>
 
-<!-- Change user role modal -->
+<!-- ===================== -->
+<!-- Change User Role Modal -->
+<!-- ===================== -->
 <div class="simple-modal-overlay superadmin-only" id="changeUserRoleModalOverlay">
     <div class="simple-modal-container" style="width: 400px;">
+
+        <!-- Modal Header -->
         <div class="simple-modal-header">
             <h5 class="simple-modal-title">Change User Role</h5>
             <button class="close" id="closeChangeUserRoleModal">
                 <span class="material-icons">close</span>
             </button>
         </div>
+
+        <!-- Modal Body -->
         <div class="simple-modal-body">
-            <form class="form-grid" id="changeUserRoleForm" style="grid-template-columns: max-content 1fr auto;">
+            <form
+                    class="form-grid"
+                    id="changeUserRoleForm"
+                    style="grid-template-columns: max-content 1fr auto;"
+            >
+
+                <!-- Username -->
                 <label>Username</label>
                 <input type="text" id="changeRoleUsername" readonly>
                 <span></span>
+
+                <!-- Current Role -->
                 <label>Current Role</label>
                 <input type="text" id="currentRoleUser" readonly>
                 <span></span>
+
+                <!-- New Role Selection -->
                 <label>New Role</label>
                 <div style="display: flex; align-items: center; gap: 20px; padding: 6px;">
-                    <label><input type="radio" name="new_role" value="admin">Admin</label>
-                    <label style="white-space:nowrap;"><input type="radio" name="new_role" value="superadmin">Super
-                        Admin</label>
+                    <label><input type="radio" name="new_role" value="admin"> Admin</label>
+                    <label style="white-space:nowrap;">
+                        <input type="radio" name="new_role" value="superadmin"> Super Admin
+                    </label>
                 </div>
                 <span></span>
+
             </form>
         </div>
+
+        <!-- Modal Footer -->
         <div class="simple-modal-footer">
             <button type="submit" class="icon-text" form="changeUserRoleForm">
-                <span class="material-icons button">save</span>Save
+                <span class="material-icons button">save</span>
+                Save
             </button>
         </div>
     </div>
 </div>
 
-<!-- User account modal -->
+<!-- ===================== -->
+<!-- User Account Modal -->
+<!-- ===================== -->
 <div class="app-modal-overlay" id="userAccountModal">
     <div class="app-modal-container">
+
+        <!-- Sidebar Menu -->
         <div class="app-modal-menu">
             <h4 class="app-modal-title">My Account</h4>
+
+            <!-- General Tab -->
             <div class="menu-item active" data-id="general" data-title="General">
                 <span class="material-icons">person</span>
                 <span>General</span>
             </div>
+
+            <!-- Connectors Tab -->
             <div class="menu-item" data-id="connectors" data-title="Connectors">
                 <span class="material-icons">account_tree</span>
                 <span>Connectors</span>
             </div>
         </div>
+
+        <!-- Content Area -->
         <div class="app-modal-content">
+
+            <!-- Header -->
             <div class="app-modal-content-header">
                 <h4 class="app-modal-section-title">General</h4>
                 <button class="close" id="closeUserAccountModal">
                     <span class="material-icons">close</span>
                 </button>
             </div>
+
             <hr>
+
+            <!-- Body -->
             <div class="app-modal-content-body">
-                <div class="app-modal-section active" id="generalSection">
-                    <form class="form-grid" id="generalForm" style="grid-template-columns: max-content 1fr auto;">
+
+                <!-- ===================== -->
+                <!-- General Section -->
+                <!-- ===================== -->
+                <section class="app-modal-section active" id="generalSection">
+                    <form
+                            class="form-grid"
+                            id="generalForm"
+                            style="grid-template-columns: max-content 1fr auto;"
+                    >
+
+                        <!-- Username -->
                         <label>Username</label>
                         <input type="text" value="{{ session.get('username')}}" readonly>
                         <span></span>
+
+                        <!-- Role -->
                         <label>Role</label>
-                        <input type="text" value="{{ session.get('userdata', {}).get('meta', {}).get('role') }}"
-                               readonly>
+                        <input
+                                type="text"
+                                value="{{ session.get('userdata', {}).get('meta', {}).get('role') }}"
+                                readonly
+                        >
                         <span></span>
+
+                        <!-- First Name -->
                         <label>First Name</label>
-                        <input type="text" value="{{ session.get('userdata', {}).get('profile', {}).get('firstname', '') }}"
-                               name="firstname">
+                        <input
+                                type="text"
+                                value="{{ session.get('userdata', {}).get('profile', {}).get('firstname', '') }}"
+                                name="firstname"
+                        >
                         <span></span>
+
+                        <!-- Last Name -->
                         <label>Last Name</label>
-                        <input type="text" value="{{ session.get('userdata', {}).get('profile', {}).get('lastname', '') }}"
-                               name="lastname">
+                        <input
+                                type="text"
+                                value="{{ session.get('userdata', {}).get('profile', {}).get('lastname', '') }}"
+                                name="lastname"
+                        >
                         <span></span>
+
+                        <!-- Email -->
                         <label>Email</label>
-                        <input type="email" value="{{ session.get('userdata', {}).get('profile', {}).get('email', '') }}"
-                               name="email">
+                        <input
+                                type="email"
+                                value="{{ session.get('userdata', {}).get('profile', {}).get('email', '') }}"
+                                name="email"
+                        >
                         <span></span>
+
                         {% if auth_params.mode == "local" %}
-                            <label>Change Password</label><input type="password" name="password" id="userPassword"
-                                                                 placeholder="Enter new password (optional)">
-                            <button type="button" class="toggle-password icon-only" data-target="#userPassword">
-                                <span class="material-icons">visibility</span>
-                            </button>
-                            <span></span>
+                        <!-- Change Password -->
+                        <label>Change Password</label>
+                        <input
+                                type="password"
+                                name="password"
+                                id="userPassword"
+                                placeholder="Enter new password (optional)"
+                        >
+                        <button
+                                type="button"
+                                class="toggle-password icon-only"
+                                data-target="#userPassword"
+                        >
+                            <span class="material-icons">visibility</span>
+                        </button>
+                        <span></span>
                         {% endif %}
+
+                        <!-- Save Button -->
                         <button type="submit" class="icon-text" style="width: 80px;">
-                            <span class="material-icons">save</span>Save
+                            <span class="material-icons">save</span>
+                            Save
                         </button>
 
                     </form>
-                </div>
-                <div class="app-modal-section" id="connectorsSection">
+                </section>
+
+                <!-- ===================== -->
+                <!-- Connectors Section -->
+                <!-- ===================== -->
+                <section class="app-modal-section" id="connectorsSection">
+
+                    <!-- Add Connector Button -->
                     <div style="display: flex; justify-content: flex-start;">
                         <button class="icon-text" id="addConnector">
-                            <span class="material-icons">add_link</span>Add Connector
+                            <span class="material-icons">add_link</span>
+                            Add Connector
                         </button>
                     </div>
+
+                    <!-- Connectors Table -->
                     <table class="display" id="userConnectorTable" style="width:100%">
                         <thead>
                         <tr>
@@ -379,51 +638,86 @@
                         </thead>
                         <tbody></tbody>
                     </table>
-                </div>
+
+                </section>
+
             </div>
         </div>
     </div>
 </div>
 
-<!-- User connector modal -->
+<!-- ===================== -->
+<!-- User Connector Modal -->
+<!-- ===================== -->
 <div class="simple-modal-overlay" id="userConnectorModalOverlay">
     <div class="simple-modal-container" style="width: 600px;">
+
+        <!-- Header -->
         <div class="simple-modal-header">
             <h5 class="simple-modal-title" id="userConnectorModalTitle">Add Connector</h5>
             <button class="close" id="closeUserConnectorModal">
                 <span class="material-icons">close</span>
             </button>
         </div>
+
+        <!-- Body -->
         <div class="simple-modal-body">
-            <form class="form-grid" id="userConnectorForm" style="grid-template-columns: max-content 1fr auto;">
+            <form
+                    class="form-grid"
+                    id="userConnectorForm"
+                    style="grid-template-columns: max-content 1fr auto;"
+            >
+
+                <!-- Name -->
                 <label>Name</label>
                 <input type="text" id="userConnectorName" required>
                 <span></span>
+
+                <!-- Jumphost IP -->
                 <label>Jumphost IP</label>
                 <input type="text" id="userConnectorJumphostIp">
                 <span></span>
+
+                <!-- Jumphost Username -->
                 <label>Jumphost Username</label>
                 <input type="text" id="userConnectorJumphostUsername">
                 <span></span>
+
+                <!-- Jumphost Password -->
                 <label>Jumphost Password</label>
                 <input type="password" id="userConnectorJumphostPassword">
-                <button type="button" class="toggle-password icon-only"
-                        data-target="#userConnectorJumphostPassword">
+                <button
+                        type="button"
+                        class="toggle-password icon-only"
+                        data-target="#userConnectorJumphostPassword"
+                >
                     <span class="material-icons">visibility</span>
                 </button>
+
+                <!-- Network Username -->
                 <label>Network Username</label>
                 <input type="text" id="userConnectorNetUsername" required>
                 <span></span>
+
+                <!-- Network Password -->
                 <label>Network Password</label>
                 <input type="password" id="userConnectorNetPassword">
-                <button type="button" class="toggle-password icon-only" data-target="#userConnectorNetPassword">
+                <button
+                        type="button"
+                        class="toggle-password icon-only"
+                        data-target="#userConnectorNetPassword"
+                >
                     <span class="material-icons">visibility</span>
                 </button>
+
             </form>
         </div>
+
+        <!-- Footer -->
         <div class="simple-modal-footer">
             <button type="submit" class="icon-text" form="userConnectorForm">
-                <span class="material-icons button">save</span>Save
+                <span class="material-icons button">save</span>
+                Save
             </button>
         </div>
     </div>

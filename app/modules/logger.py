@@ -1,14 +1,12 @@
 """
-app/modules/logger.py
+Custom logging utilities with regex-based filtering and file stream support.
 
-Summary: Custom logging utilities with regex-based filtering and file
-stream support.
+This module defines `RegexFilter` for excluding log records based on a
+regular expression and `StreamLogger`, a custom logger that writes
+formatted log records to a file and can attach its handlers to the
+root logger.
 
-Description:
-    This module defines `RegexFilter` for excluding log records based on
-    a regular expression and `StreamLogger`, a custom logger that writes
-    formatted log records to a file and can attach its handlers to the
-    root logger.
+File path: app/modules/logger.py
 """
 
 import logging
@@ -32,11 +30,14 @@ class RegexFilter(logging.Filter):
 
 
 class StreamLogger(logging.Logger):
-    """Logger that writes JSON-formatted records to a file."""
+    """Logger that writes formatted records to a file."""
 
     def __init__(
-            self, name, log_file, level=logging.INFO,
-            filter_regex=None
+            self,
+            name,
+            log_file,
+            level=logging.INFO,
+            filter_regex=None,
     ):
         """Initialize logger with file output and optional filtering."""
         super().__init__(name, level)
@@ -45,21 +46,35 @@ class StreamLogger(logging.Logger):
         self.filter_regex = filter_regex
 
         self.propagate = False
-        self.formatter = logging.Formatter("%(asctime)s | %(levelname)s | %(module)s | %(message)s",
-                                           datefmt="%Y-%m-%d %H:%M:%S")
+        self.formatter = logging.Formatter(
+            "%(asctime)s | %(levelname)s | %(module)s | %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+        )
+
+        logging.debug("Initializing StreamLogger: %s", name)
+
         if not self.handlers:
             self._setup_file_handler()
 
     def _setup_file_handler(self):
         """Configure and attach a file handler to this logger."""
-        os.makedirs(os.path.dirname(self.log_file), exist_ok=True)
-        file_handler = logging.FileHandler(self.log_file, mode="a", encoding="utf-8")
-        file_handler.setFormatter(self.formatter)
+        try:
+            os.makedirs(os.path.dirname(self.log_file), exist_ok=True)
+            file_handler = logging.FileHandler(
+                self.log_file, mode="a", encoding="utf-8"
+            )
+            file_handler.setFormatter(self.formatter)
 
-        if self.filter_regex:
-            file_handler.addFilter(RegexFilter(self.filter_regex))
+            if self.filter_regex:
+                file_handler.addFilter(RegexFilter(self.filter_regex))
+                logging.info(
+                    "Applied regex filter to logger: %s", self.filter_regex
+                )
 
-        self.addHandler(file_handler)
+            self.addHandler(file_handler)
+
+        except Exception:
+            logging.exception("Failed to set up file handler")
 
     def attach_root(self):
         """Attach this logger's handlers to the root logger."""
@@ -69,6 +84,7 @@ class StreamLogger(logging.Logger):
         existing_handler_types = {
             type(handler) for handler in root_logger.handlers
         }
+
         # Avoid adding duplicate handler types to root logger
         for handler in self.handlers:
             if type(handler) not in existing_handler_types:

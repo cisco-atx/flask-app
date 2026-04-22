@@ -1,23 +1,27 @@
-"""
-Authentication-related views and decorators for handling login, registration, and authorization
-within the Flask application.
+"""Login routes and authentication decorators.
+
+This module handles user authentication, including login, registration,
+logout, and role-based access control decorators. It integrates with the
+application's authentication backend and manages session-based access.
+
+Path: app/routes/login.py
 """
 
-from flask import render_template, current_app, request, session, flash, url_for, redirect
 from functools import wraps
+
+from flask import (
+    current_app,
+    flash,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 
 
 def render_login():
-    """
-    Handle the login page rendering and login logic.
-
-    If the request method is POST, authenticate the user credentials.
-    Sets session variables and redirects to the dashboard upon successful login.
-    Renders the login page for GET requests.
-
-    Returns:
-        HTTP Response: Redirects or renders the login template.
-    """
+    """Render login page and handle authentication logic."""
     auth_params = current_app.utils.AUTH_PARAMS
 
     if request.method == "POST":
@@ -37,7 +41,7 @@ def render_login():
         success = current_app.auth.authenticate(
             username=username,
             password=password,
-            **auth_kwargs
+            **auth_kwargs,
         )
 
         if not success:
@@ -53,16 +57,7 @@ def render_login():
 
 
 def render_register():
-    """
-    Handle the registration page rendering and user registration logic.
-
-    If the request method is POST, registers the user with the provided details.
-    Redirects to the login page upon successful registration. Renders the
-    registration page for GET requests.
-
-    Returns:
-        HTTP Response: Redirects or renders the registration template.
-    """
+    """Render registration page and handle user registration."""
     if request.method == "POST":
         firstname = request.form["firstname"].strip()
         lastname = request.form["lastname"].strip()
@@ -74,36 +69,40 @@ def render_register():
             username=username,
             password=password,
             role="user",
-            profile={"email": email, "firstname": firstname, "lastname": lastname}
+            profile={
+                "email": email,
+                "firstname": firstname,
+                "lastname": lastname,
+            },
         )
+
         if ok:
             flash("Registration successful! Please log in.", "success")
             return redirect(url_for("atx.render_login"))
+
         flash(msg, "danger")
 
     return render_template("atx.register.html")
 
 
 def logout():
-    """
-    Clear the current session and log out the user.
-
-    Flash a message and redirect to the login page.
-
-    Returns:
-        HTTP Response: Redirects to the login page.
-    """
+    """Log out the user and clear session."""
     reason = request.args.get("reason")
+    user = session.get("username")
+
     session.clear()
+
     if reason:
         flash(reason, "info")
     else:
         flash("You have been logged out.", "info")
+
     return redirect(url_for("atx.render_login"))
 
 
 def no_auth_required(f):
-    """Decorator to mark routes as not requiring authentication."""
+    """Mark route as publicly accessible."""
+
     @wraps(f)
     def decorated_function(*args, **kwargs):
         return f(*args, **kwargs)
@@ -113,75 +112,60 @@ def no_auth_required(f):
 
 
 def login_required(f):
-    """
-    Decorator to enforce login for protected routes.
+    """Ensure user is logged in before accessing route."""
 
-    Redirects to the login page if the user is not logged in.
-
-    Arguments:
-        f (function): The function to wrap.
-
-    Returns:
-        function: The wrapped function.
-    """
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not session.get("username"):
             flash("Please log in to access this page.", "warning")
             return redirect(url_for("atx.render_login"))
+
         return f(*args, **kwargs)
+
     return decorated_function
 
 
 def admin_required(f):
-    """
-    Decorator to enforce admin role for accessing specific routes.
+    """Ensure user has admin role before accessing route."""
 
-    Redirects to the login page if the user is not logged in, or
-    to the dashboard if the user does not have admin privileges.
-
-    Arguments:
-        f (function): The function to wrap.
-
-    Returns:
-        function: The wrapped function.
-    """
     @wraps(f)
     def decorated_function(*args, **kwargs):
         user = session.get("username")
+
         if not user:
             flash("Please log in to access this page.", "warning")
             return redirect(url_for("atx.render_login"))
 
-        if "admin" not in session.get("userdata", {}).get('meta').get('role', ""):
-            flash("You do not have permission to access this page.", "danger")
+        role = session.get("userdata", {}).get("meta", {}).get("role", "")
+        if "admin" not in role:
+            flash(
+                "You do not have permission to access this page.", "danger"
+            )
             return redirect(url_for("atx.render_home"))
 
         return f(*args, **kwargs)
+
     return decorated_function
 
+
 def superadmin_required(f):
-    """
-    Decorator to enforce superadmin role for accessing specific routes.
+    """Ensure user has superadmin role before accessing route."""
 
-    Redirects to the login page if the user is not logged in, or
-    to the dashboard if the user does not have superadmin privileges.
-
-    Arguments:
-        f (function): The function to wrap.
-    Returns:
-        function: The wrapped function.
-    """
     @wraps(f)
     def decorated_function(*args, **kwargs):
         user = session.get("username")
+
         if not user:
             flash("Please log in to access this page.", "warning")
             return redirect(url_for("atx.render_login"))
 
-        if session.get("userdata", {}).get('meta').get('role', "") != "superadmin":
-            flash("You do not have permission to access this page.", "danger")
+        role = session.get("userdata", {}).get("meta", {}).get("role", "")
+        if role != "superadmin":
+            flash(
+                "You do not have permission to access this page.", "danger"
+            )
             return redirect(url_for("atx.render_home"))
 
         return f(*args, **kwargs)
+
     return decorated_function

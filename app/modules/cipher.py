@@ -1,42 +1,46 @@
 """
-PasswordCipher Module
+Password cipher utilities.
 
-This module provides functionality to encrypt and decrypt passwords
-using the Fernet symmetric encryption from the cryptography library.
+Provides functionality to encrypt and decrypt passwords using Fernet
+symmetric encryption from the cryptography library. The key is loaded
+from an environment variable or file, and generated if not present.
 
+Module path: app/modules/cipher.py
 """
 
-from cryptography.fernet import Fernet, InvalidToken
-from pathlib import Path
+import logging
 import os
+from pathlib import Path
+
+from cryptography.fernet import Fernet, InvalidToken
+
+logger = logging.getLogger(__name__)
+
 
 class PasswordCipher:
-    """
-    A class to handle encryption and decryption of passwords using Fernet symmetric encryption.
+    """Handle encryption and decryption using Fernet symmetric encryption."""
 
-    Attributes:
-        key_file (Path): The path to the file storing the Fernet key.
-        fernet (Fernet): The Fernet instance for encryption and decryption.
-    """
     ENV_KEY_NAME = "NETAUDIT_FERNET_KEY"
     DEFAULT_KEY_FILE = "secrets/fernet.key"
 
     def __init__(self, key_file: str | None = None):
+        """Initialize cipher with key from env or file."""
         self.key_file = Path(
-            key_file or os.environ.get("NETAUDIT_KEY_FILE", self.DEFAULT_KEY_FILE)
+            key_file or os.environ.get(
+                "NETAUDIT_KEY_FILE", self.DEFAULT_KEY_FILE
+            )
         )
+
+        logger.info("Initializing PasswordCipher with key file: %s",
+                    self.key_file)
 
         self.key = self._load_key()
         self.fernet = Fernet(self.key)
 
     def _load_key(self) -> bytes:
-        """
-        Loads the Fernet key from an environment variable or a file.
-
-        Returns:
-            The Fernet key as bytes.
-        """
+        """Load Fernet key from environment variable or file."""
         env_key = os.environ.get(self.ENV_KEY_NAME)
+
         if env_key:
             return env_key.encode()
 
@@ -46,12 +50,7 @@ class PasswordCipher:
         return self._generate_and_store_key()
 
     def _generate_and_store_key(self) -> bytes:
-        """
-        Generates a new Fernet key and stores it in the specified key file.
-
-        Returns:
-            The generated Fernet key as bytes.
-        """
+        """Generate and persist a new Fernet key."""
         key = Fernet.generate_key()
 
         self.key_file.parent.mkdir(parents=True, exist_ok=True)
@@ -60,35 +59,26 @@ class PasswordCipher:
         try:
             self.key_file.chmod(0o600)
         except PermissionError:
-            pass
+            logger.warning("Permission change failed for key file: %s",
+                           self.key_file)
 
         return key
 
     def encrypt(self, plain_text: str) -> str:
-        """
-        Encrypts the given plain text using Fernet symmetric encryption.
-        Args:
-            plain_text: The plain text string to be encrypted.
-
-        Returns:
-            The encrypted string (cipher text).
-        """
+        """Encrypt plain text using Fernet."""
         if not plain_text:
             return ""
+
         return self.fernet.encrypt(plain_text.encode()).decode()
 
     def decrypt(self, cipher_text: str) -> str:
-        """
-        Decrypts the given cipher text using Fernet symmetric encryption.
-        Args:
-            cipher_text: The encrypted string to be decrypted.
-
-        Returns:
-            The decrypted plain text string.
-        """
+        """Decrypt cipher text using Fernet."""
         if not cipher_text:
             return ""
+
         try:
             return self.fernet.decrypt(cipher_text.encode()).decode()
         except InvalidToken:
-            raise ValueError("Decryption failed: invalid key or corrupted data.")
+            raise ValueError(
+                "Decryption failed: invalid key or corrupted data."
+            )

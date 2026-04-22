@@ -1,60 +1,63 @@
 """
-app/routes/base.py
+Flask base routes for home page and activity streaming.
 
-Summary: Flask views for rendering the home page and streaming log
-activity.
+This module defines route handlers responsible for rendering the
+application home page and streaming application log activity using
+Server-Sent Events (SSE). It enables real-time monitoring by tailing
+the log file and pushing updates to connected clients.
 
-Description:
-    This module provides route handlers for rendering the application
-    home page and streaming the global application log as
-    Server-Sent Events (SSE) for real-time activity monitoring.
+Path: app/routes/base.py
 """
 
-# Standard library imports
 import json
 import logging
 import os
 import time
 
-# Third-party imports
-from flask import (
-    Response,
-    current_app,
-    render_template,
-    stream_with_context,
-)
+from flask import Response, current_app, render_template, stream_with_context
+
+logger = logging.getLogger(__name__)
 
 
 def render_home():
     """Render the home page for logged-in users."""
     return render_template("atx.home.html")
 
+
 def activity():
-    """Stream the global application log file as Server-Sent Events (SSE)."""
+    """Stream the global application log file as SSE."""
     log_file = current_app.global_logger.log_file
 
     def log_event():
-        # Send last 500 lines as history
-        with open(log_file, "r", encoding="utf-8") as f:
-            history = f.readlines()[-500:]
+        """Generate log events for SSE stream."""
+        try:
+            with open(log_file, "r", encoding="utf-8") as f:
+                history = f.readlines()[-500:]
+        except Exception:
+            logger.exception("Failed to read log file for history")
+            return
 
         for line in history:
-            line = _parse_log_line(line)
-            if line:
-                yield f"data: {line}\n\n"
+            parsed_line = _parse_log_line(line)
+            if parsed_line:
+                yield f"data: {parsed_line}\n\n"
 
-        # Start tailing from EOF for live updates
-        with open(log_file, "r", encoding="utf-8") as f:
-            f.seek(0, os.SEEK_END)
+        try:
+            with open(log_file, "r", encoding="utf-8") as f:
+                f.seek(0, os.SEEK_END)
 
-            while True:
-                line = _parse_log_line(f.readline())
-                if line:
-                    yield f"data: {line.strip()}\n\n"
-                else:
-                    # heartbeat keeps connection alive
-                    yield ": keep-alive\n\n"
-                    time.sleep(1)
+                while True:
+                    line = f.readline()
+                    parsed_line = _parse_log_line(line)
+
+                    if parsed_line:
+                        yield f"data: {parsed_line.strip()}\n\n"
+                    else:
+                        # Heartbeat to keep connection alive
+                        yield ": keep-alive\n\n"
+                        time.sleep(1)
+        except Exception:
+            logger.exception("Error while streaming log file")
 
     return Response(
         stream_with_context(log_event()),
@@ -66,14 +69,22 @@ def activity():
         },
     )
 
+
 def _parse_log_line(line):
+    """Parse a log line into JSON format for SSE transmission."""
     try:
         parts = line.strip().split(" | ")
-        return json.dumps({
-            "asctime": parts[0],
-            "levelname": parts[1],
-            "module": parts[2],
-            "message": " | ".join(parts[3:]),
-        })
+        if len(parts) < 4:
+            return None
+
+        return json.dumps(
+            {
+                "asctime": parts[0],
+                "levelname": parts[1],
+                "module": parts[2],
+                "message": " | ".join(parts[3:]),
+            }
+        )
     except Exception:
+        logger.exception("Failed to parse log line")
         return None
