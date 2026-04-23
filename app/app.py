@@ -61,16 +61,12 @@ class FlaskApp(Flask):
         self.before_request(self.enforce_session_policies)
 
     def setup_server_instance(self):
-        """Ensure a unique server instance ID is set."""
-        if not os.path.exists(self.utils.SERVER_INSTANCE_FILE):
-            logger.info("Creating new server instance ID file.")
-            with open(self.utils.SERVER_INSTANCE_FILE, "w") as f:
-                f.write(str(uuid.uuid4()))
+        """Ensure a shared instance ID across workers."""
+        self.server_instance_id = os.environ.get("SERVER_INSTANCE_ID")
 
-        with open(self.utils.SERVER_INSTANCE_FILE, "r") as f:
-            self.server_instance_id = f.read().strip()
-
-        logger.info("Server instance ID set: %s", self.server_instance_id)
+        if not self.server_instance_id:
+            self.server_instance_id = str(uuid.uuid4())
+            os.environ["SERVER_INSTANCE_ID"] = self.server_instance_id
 
     def setup_directories(self):
         """Ensure necessary directories exist."""
