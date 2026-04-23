@@ -1,9 +1,19 @@
 /**
- * base.home.js
+ * atx.home.js
+ *
+ * This JavaScript file manages the main functionalities of the home page, including:
+ * - Theme toggling between light and dark modes, with persistence via server update.
+ * - Role-based visibility of UI elements for admin and superadmin users.
+ * - User account menu handling, including profile updates and connector management.
+ * - Administration modal for managing applications and users, with DataTable integration.
+ * - Application dropdown for navigating between registered applications, with caching for performance.
+ * The code ensures a responsive and interactive user experience while maintaining security and access control based on user roles.
  */
+
 
 document.addEventListener("DOMContentLoaded", () => {
 
+    // Load Material Symbols Rounded font and add class to root element when loaded for better font loading control
     document.fonts.load('21px "Material Symbols Rounded"').then(() => {
         document.documentElement.classList.add('fonts-loaded');
     });
@@ -13,6 +23,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (element) element.addEventListener(event, handler);
     }
 
+    // Role-based visibility: Shows or hides elements based on the current user's role by toggling their display style.
     function applyRoleBasedVisibility(role) {
         document.querySelectorAll('.admin-only').forEach(el => {
             el.style.display = (role === 'admin' || role === 'superadmin') ? '' : 'none';
@@ -22,7 +33,6 @@ document.addEventListener("DOMContentLoaded", () => {
             el.style.display = (role === 'superadmin') ? '' : 'none';
         });
     }
-
     applyRoleBasedVisibility(CURRENT_USERROLE);
 
     /**

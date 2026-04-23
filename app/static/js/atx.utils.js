@@ -1,8 +1,10 @@
 /**
- * Generic Run Modal
- * - Opens modal
- * - Loads connectors
- * - Returns selected connector config
+ * atx.utils.js
+ *
+ * This file contains utility functions for the ATX application, including:
+ * 1. RunModal: A modal dialog for selecting a connector at runtime.
+ * 2. ensureDeviceConnectors: A function that builds a device-to-connector map, prompting the user if any device lacks a connector.
+ * These utilities help manage connectors and device configurations within the ATX application.
  */
 
 document.addEventListener("DOMContentLoaded", () => {

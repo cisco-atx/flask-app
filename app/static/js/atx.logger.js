@@ -1,7 +1,16 @@
 /**
- * base.logger.js
- * Handles the logger dock UI, log fetching, level filtering, and state persistence.
+ * atx.logger.js
+ *
+ * This script implements a real-time logging dock for a Flask web application.
+ * Main functionalities include:
+ * - Establishing a Server-Sent Events (SSE) connection to receive log updates.
+ * - Rendering log entries in a table format with filtering options by log level.
+ * - Allowing users to toggle the visibility of the logger dock and persist their preferences using localStorage.
+ * - Providing auto-scrolling to the latest log entries and visual indicators for different log levels.
+ *
+ * This enhances the developer experience by providing immediate feedback on application events and errors directly within the web interface.
  */
+
 
 let loggerEventSource;
 
