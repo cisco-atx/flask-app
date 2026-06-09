@@ -182,7 +182,8 @@ document.addEventListener("DOMContentLoaded", () => {
                         name: app.name,
                         version: app.version,
                         description: app.description || '',
-                        url_prefix: app.url_prefix || ''
+                        url_prefix: app.url_prefix || '',
+                        git_managed: app.git_managed || false
                     }));
                 }
             },
@@ -201,15 +202,35 @@ document.addEventListener("DOMContentLoaded", () => {
                 { data: 'version' },
                 { data: 'description' },
                 {
-                    data: null,
+                    data: 'git_managed',
                     orderable: false,
-                    render: function (data, type, row) {
-                        return `
-                            <div class="superadmin-only" style="display: flex; gap: 10px; justify-content: center;">
-                               <button class="delete-app icon-text" data-id="${row.id}" data-name="${row.name}">
-                                   <span class="material-icons">delete</span>
-                                   <span>Delete</span>
-                               </button>
+                    render: function (gitManaged, type, row) {
+                        const syncButton = gitManaged
+                            ? `
+                                <button class="pull-app icon-text" data-id="${row.id}" data-name="${row.name}"
+                                    title="Pull latest changes from Git"
+                                >
+                                    <span class="material-icons">sync</span>
+                                    <span>Sync</span>
+                                </button>`
+                            : `<button class="icon-text" disabled title="Not a Git-managed blueprint">
+                                    <span class="material-icons">sync_disabled</span>
+                                    <span>Sync</span>
+                                </button>
+                            `;
+                        return `<div class="superadmin-only"
+                                style="
+                                    display:flex;
+                                    gap:10px;
+                                    justify-content:center;
+                                    align-items:center;
+                                "
+                            >
+                                ${syncButton}
+                                <button class="delete-app icon-text" data-id="${row.id}" data-name="${row.name}">
+                                    <span class="material-icons">delete</span>
+                                    <span>Delete</span>
+                                </button>
                             </div>
                         `;
                     }
@@ -294,6 +315,55 @@ document.addEventListener("DOMContentLoaded", () => {
         dirInput.trigger('click');
     });
 
+    $('#gitCloneBtn').on('click', function () {
+        const repoUrl = $('#gitRepoUrl').val().trim();
+        if (!repoUrl) {
+            alert('Please enter a Git repository URL');
+            return;
+        }
+        const btn = $(this);
+        $.ajax({
+            url: '/api/blueprint/git_clone',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                repo_url: repoUrl
+            }),
+            beforeSend: function () {
+                btn.prop('disabled', true)
+                   .html(`
+                       <span class="material-icons">hourglass_top</span>
+                       Cloning...
+                   `);
+            },
+            success: function () {
+                clearBlueprintCache();
+                if (applicationTable) {
+                    applicationTable.ajax.reload(null, false);
+                }
+                $('#gitRepoUrl').val('');
+                $('#appModalOverlay').hide();
+                alert(
+                    'Blueprint cloned successfully.\n' +
+                    'Reload Flask server to activate.'
+                );
+            },
+            error: function (err) {
+                alert(
+                    err.responseJSON?.error ||
+                    'Clone failed'
+                );
+            },
+            complete: function () {
+                btn.prop('disabled', false)
+                   .html(`
+                       <span class="material-icons">download</span>
+                       Clone
+                   `);
+            }
+        });
+    });
+
     $(document).on('click', '.delete-app', function () {
         const appId = $(this).data('id');
         const appName = $(this).data('name');
@@ -331,6 +401,49 @@ document.addEventListener("DOMContentLoaded", () => {
 
             error: function (err) {
                 alert(err.responseJSON?.error || 'Delete failed');
+            }
+        });
+    });
+
+    $(document).on('click', '.pull-app', function () {
+        const appId = $(this).data('id');
+        const appName = $(this).data('name');
+        const btn = $(this);
+        $.ajax({
+            url: '/api/blueprint/git_pull',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                blueprint_id: appId
+            }),
+            beforeSend: function () {
+                btn.prop('disabled', true)
+                   .html(`
+                       <span class="material-icons">hourglass_top</span>
+                       Pulling...
+                   `);
+            },
+            success: function (resp) {
+                clearBlueprintCache();
+                if (applicationTable) {
+                    applicationTable.ajax.reload(null, false);
+                }
+                alert(
+                    `Updated ${appName}\n\n${resp.message}`
+                );
+            },
+            error: function (err) {
+                alert(
+                    err.responseJSON?.error ||
+                    'Git pull failed'
+                );
+            },
+            complete: function () {
+                btn.prop('disabled', false)
+                   .html(`
+                       <span class="material-icons">sync</span>
+                       Pull
+                   `);
             }
         });
     });
@@ -784,12 +897,56 @@ document.addEventListener("DOMContentLoaded", () => {
                 `;
                 document.getElementById("applicationDropdownMenu").style.display = "none";
                 document.getElementById("mainLayoutContent").innerHTML = `
-                    <div style="text-align:center;margin-top:50px;color:var(--text-secondary);">
-                        <span class="material-icons" style="font-size:48px;">apps_outage</span>
+                    <div
+                        style="
+                            display:flex;
+                            flex-direction:column;
+                            align-items:center;
+                            justify-content:center;
+                            height:100%;
+                            text-align:center;
+                            color:var(--text-secondary);
+                            gap:10px;
+                        "
+                    >
+                        <span class="material-icons" style="font-size:64px;">
+                            apps_outage
+                        </span>
                         <h2>No applications found</h2>
-                        <p>Please contact your administrator.</p>
+                        <p>No applications are currently registered.</p>
+                        ${
+                            CURRENT_USERROLE === 'superadmin'
+                                ? `
+                                <button id="emptyStateAddApplication" class="icon-text">
+                                    <span class="material-icons">add</span>
+                                    Add Application
+                                </button>
+                                `
+                                : ''
+                        }
                     </div>
                 `;
+                const addAppBtn = document.getElementById('emptyStateAddApplication');
+                if (addAppBtn) {
+                    addAppBtn.addEventListener('click', () => {
+
+                        // Open Administration modal
+                        adminModal.style.display = 'flex';
+                
+                        // Switch to Applications tab
+                        const applicationsTab = adminModal.querySelector(
+                            '.app-modal-menu .menu-item[data-id="applications"]'
+                        );
+
+                        if (applicationsTab) {
+                            applicationsTab.click();
+                        }
+
+                        // Open Add Application modal
+                        $('#appModalForm')[0].reset();
+                        $('#appModalOverlay').css('display', 'flex');
+                    });
+                }
                 document.querySelector(".logger-dock").style.left = "0";
                 return;
             }

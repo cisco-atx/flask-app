@@ -31,6 +31,8 @@ from .api import (
     update_profile,
     update_user_theme,
     upload_blueprint,
+    git_clone_blueprint,
+    git_pull_blueprint
 )
 
 # Importing authentication and authorization views and decorators.
@@ -152,6 +154,18 @@ routes = [
         "rule": "/api/blueprint/upload",
         "endpoint": "atx.api_upload_blueprint",
         "view_func": admin_required(upload_blueprint),
+        "methods": ["POST"],
+    },
+    {
+        "rule": "/api/blueprint/git_clone",
+        "endpoint": "atx.api_git_clone_blueprint",
+        "view_func": login_required(git_clone_blueprint),
+        "methods": ["POST"],
+    },
+    {
+        "rule": "/api/blueprint/git_pull",
+        "endpoint": "atx.api_git_pull_blueprint",
+        "view_func": login_required(git_pull_blueprint),
         "methods": ["POST"],
     },
     {

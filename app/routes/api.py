@@ -16,8 +16,10 @@ import logging
 import os
 import pkgutil
 import shutil
+import subprocess
 import sys
 import tempfile
+from urllib.parse import urlparse
 
 from flask import (
     Blueprint,
@@ -297,6 +299,7 @@ def load_blueprints():
                 "path": bp_path,
                 **getattr(bp_cls, "meta", {}),
             }
+            bp["git_managed"] = os.path.isdir(os.path.join(bp_path, ".git"))
 
             bp_instance = bp_cls()
 
@@ -399,6 +402,80 @@ def delete_blueprint():
 
     return jsonify(deleted=deleted)
 
+def git_clone_blueprint():
+    """Clone blueprint repository."""
+    payload = request.get_json()
+    repo_url = payload.get("repo_url", "").strip()
+
+    if not repo_url:
+        return jsonify(error="Repository URL required"), 400
+
+    repo_name = (os.path.basename(urlparse(repo_url).path).replace(".git", ""))
+    target_dir = os.path.join(current_app.utils.BP_DIR,  repo_name)
+
+    if os.path.exists(target_dir):
+        return jsonify(error=f"Blueprint '{repo_name}' already exists"), 400
+
+    try:
+        result = subprocess.run(
+            ["git", "clone", repo_url, target_dir],
+            capture_output=True,
+            text=True,
+            timeout=300
+        )
+
+        if result.returncode != 0:
+            return jsonify(error=result.stderr), 500
+
+        load_blueprints()
+        logger.info("Blueprint cloned: %s", repo_url)
+        return jsonify(success=True, blueprint=repo_name)
+
+    except Exception as exc:
+        if os.path.exists(target_dir):
+            shutil.rmtree(target_dir, ignore_errors=True)
+        logger.exception("Clone failed")
+
+        return jsonify(error=str(exc)), 500
+
+def git_pull_blueprint():
+    """Update blueprint from git."""
+    payload = request.get_json()
+    blueprint_id = payload.get("blueprint_id")
+
+    if not blueprint_id:
+        return jsonify(error="Blueprint ID required"), 400
+
+    bp_path = os.path.join(current_app.utils.BP_DIR,blueprint_id)
+    if not os.path.exists(bp_path):
+        return jsonify(error="Blueprint not found"), 404
+
+    git_dir = os.path.join(bp_path,".git")
+
+    if not os.path.isdir(git_dir):
+        return jsonify(error="Blueprint is not git-managed"), 400
+
+    try:
+        result = subprocess.run(
+            ["git", "-C", bp_path, "pull"],
+            capture_output=True,
+            text=True,
+            timeout=300
+        )
+
+        if result.returncode != 0:
+            return jsonify(error=result.stderr), 500
+
+        load_blueprints()
+        logger.info("Blueprint updated: %s", blueprint_id)
+
+        return jsonify(
+            success=True,
+            message=result.stdout
+        )
+    except Exception as exc:
+        logger.exception("Git pull failed")
+        return jsonify(error=str(exc)), 500
 
 def _validate_bp_class(bp_cls):
     """Validate blueprint class contract."""

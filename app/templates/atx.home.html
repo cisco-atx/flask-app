@@ -339,23 +339,27 @@
 
             <!-- Application Form -->
             <form id="appModalForm">
+
+                <!-- Upload Directory -->
                 <div class="form-grid" style="grid-template-columns: max-content 1fr auto;">
-
-                    <!-- File Directory Input -->
-                    <label style="width: 90px;">File Directory</label>
-                    <input type="text" id="appDir" placeholder="/path/to/app-directory">
-
-                    <!-- Upload Button -->
-                    <button
-                            style="width: 100px;"
-                            type="button"
-                            id="uploadAppBtn"
-                            class="icon-text"
-                    >
+                    <label style="width: 90px;">Directory</label>
+                    <input type="text" id="appDir" placeholder="/path/to/app-directory"readonly>
+                    <button type="button" id="uploadAppBtn" class="icon-text">
                         <span class="material-icons">upload</span>
                         Upload
                     </button>
+                </div>
 
+                <hr style="margin:15px 0;">
+
+                <!-- Git Clone -->
+                <div class="form-grid" style="grid-template-columns: max-content 1fr auto;">
+                    <label style="width: 90px;">Git URL</label>
+                    <input type="text" id="gitRepoUrl" placeholder="https://github.com/org/repo.git">
+                    <button type="button" id="gitCloneBtn" class="icon-text">
+                        <span class="material-icons">download</span>
+                        Clone
+                    </button>
                 </div>
             </form>
         </div>
