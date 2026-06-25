@@ -20,9 +20,7 @@ HOME_DIR = os.path.join(os.path.expanduser("~"), ".atx")
 
 GLOBAL_LOGGER = os.path.join(HOME_DIR, "logger.log")
 CIPHER_KEY = os.path.join(HOME_DIR, "cipher.key")
-SERVER_INSTANCE_FILE = os.path.join(
-    HOME_DIR, "server_instance_id.uuid"
-)
+SERVER_INSTANCE_FILE = os.path.join(HOME_DIR, "server_instance_id.uuid")
 PROJECT_DIR = os.path.join(HOME_DIR, "projects")
 DB_DIR = os.path.join(HOME_DIR, "db")
 USERS_DIR = os.path.join(HOME_DIR, "users")
@@ -31,3 +29,4 @@ BP_DIR = os.path.join(HOME_DIR, "blueprints")
 # Database file paths
 BP_DB = os.path.join(DB_DIR, "blueprints.sqlite")
 USERS_DB = os.path.join(DB_DIR, "users.sqlite")
+PROVIDERS_DB = os.path.join(DB_DIR, "providers.sqlite")

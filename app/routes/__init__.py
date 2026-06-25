@@ -12,11 +12,13 @@ from flask import redirect, url_for
 # Importing view functions for rendering pages and handling user activity.
 from .base import activity, render_home
 
-# Importing API views for user profile and connector management.
+# Importing API views for user, provider, and connector management.
 from .api import (
+    add_provider,
     add_user,
     change_user_role,
     delete_blueprint,
+    delete_provider,
     delete_report,
     delete_user,
     delete_user_connector,
@@ -25,14 +27,17 @@ from .api import (
     get_reports,
     get_user_connectors,
     get_users,
+    list_providers,
     load_blueprints,
     render_html,
     save_user_connector,
+    test_provider,
+    update_local_user,
     update_profile,
     update_user_theme,
     upload_blueprint,
     git_clone_blueprint,
-    git_pull_blueprint
+    git_pull_blueprint,
 )
 
 # Importing authentication and authorization views and decorators.
@@ -121,6 +126,12 @@ routes = [
         "methods": ["POST"],
     },
     {
+        "rule": "/api/user/update",
+        "endpoint": "atx.api_update_local_user",
+        "view_func": superadmin_required(update_local_user),
+        "methods": ["POST"],
+    },
+    {
         "rule": "/api/user/change_role",
         "endpoint": "atx.api_change_user_role",
         "view_func": superadmin_required(change_user_role),
@@ -137,6 +148,30 @@ routes = [
         "endpoint": "atx.api_delete_user",
         "view_func": superadmin_required(delete_user),
         "methods": ["DELETE"],
+    },
+    {
+        "rule": "/api/providers",
+        "endpoint": "atx.api_list_providers",
+        "view_func": superadmin_required(list_providers),
+        "methods": ["GET"],
+    },
+    {
+        "rule": "/api/provider",
+        "endpoint": "atx.api_add_provider",
+        "view_func": superadmin_required(add_provider),
+        "methods": ["POST"],
+    },
+    {
+        "rule": "/api/provider",
+        "endpoint": "atx.api_delete_provider",
+        "view_func": superadmin_required(delete_provider),
+        "methods": ["DELETE"],
+    },
+    {
+        "rule": "/api/provider/test",
+        "endpoint": "atx.api_test_provider",
+        "view_func": superadmin_required(test_provider),
+        "methods": ["POST"],
     },
     {
         "rule": "/api/blueprints",

@@ -34,6 +34,7 @@ from flask import (
 
 logger = logging.getLogger(__name__)
 
+# ===================== Profile / connectors =====================
 
 def update_profile():
     """Update the profile information for the logged-in user."""
@@ -42,24 +43,23 @@ def update_profile():
         return jsonify(success=False, message="No user logged in"), 401
 
     user_data = current_app.users_db.get(username, {})
+    profile = user_data.setdefault("profile", {})
 
-    user_data["firstname"] = request.form.get(
-        "firstname", user_data.get("firstname")
-    )
-    user_data["lastname"] = request.form.get(
-        "lastname", user_data.get("lastname")
-    )
-    user_data["email"] = request.form.get(
-        "email", user_data.get("email")
-    )
+    profile["firstname"] = request.form.get("firstname", profile.get("firstname"))
+    profile["lastname"] = request.form.get("lastname", profile.get("lastname"))
+    profile["email"] = request.form.get("email", profile.get("email"))
 
+    # Password change applies only to local-provider users.
     password = request.form.get("password")
-    if password:
-        user_data["password"] = hashlib.sha256(
-            password.encode()
-        ).hexdigest()
+    if password and user_data.get("meta", {}).get("auth_provider") == "local":
+        ok, _ = current_app.auth.update_local_user(
+            username=username, password=password
+        )
+        user_data = current_app.users_db.get(username, {})
+        user_data.setdefault("profile", {}).update(profile)
 
-    current_app.users_db.update({username: user_data})
+    current_app.users_db[username] = user_data
+    session["userdata"] = user_data
 
     return jsonify(success=True)
 
@@ -161,6 +161,7 @@ def delete_user_connector():
 
     return jsonify(success=True)
 
+# ===================== Users =====================
 
 def get_users():
     """Retrieve all registered users."""
@@ -168,48 +169,58 @@ def get_users():
 
 
 def add_user():
-    """Register a new admin user."""
-    payload = request.get_json()
-
-    current_app.auth.register(
-        **{
-            "username": payload.get("username"),
-            "password": payload.get("password"),
-            "role": payload.get("role"),
-            "profile": {
-                "firstname": payload.get("firstname"),
-                "lastname": payload.get("lastname"),
-                "email": payload.get("email"),
-            },
-        }
+    """Register a new user under a chosen provider (default local)."""
+    payload = request.get_json() or {}
+    ok, msg = current_app.auth.register(
+        username=payload.get("username"),
+        password=payload.get("password"),
+        role=payload.get("role", "user"),
+        auth_provider=payload.get("auth_provider", "local"),
+        profile={
+            "firstname": payload.get("firstname"),
+            "lastname": payload.get("lastname"),
+            "email": payload.get("email"),
+        },
     )
+    status = 200 if ok else 400
+    return jsonify(success=ok, message=msg), status
 
-    return jsonify(success=True)
+def update_local_user():
+    """Admin update of a local user's profile, role, and/or password."""
+    payload = request.get_json() or {}
+    username = payload.get("username")
+    if not username:
+        return jsonify(success=False, message="Username is required"), 400
 
+    ok, msg = current_app.auth.update_local_user(
+        username=username,
+        role=payload.get("role"),
+        password=payload.get("password"),
+        profile={
+            "firstname": payload.get("firstname"),
+            "lastname": payload.get("lastname"),
+            "email": payload.get("email"),
+        },
+    )
+    status = 200 if ok else 400
+    return jsonify(success=ok, message=msg), status
 
 def change_user_role():
     """Change the role of a user."""
-    payload = request.get_json()
+    payload = request.get_json() or {}
     username = payload.get("username")
     new_role = payload.get("role")
 
     if not username or not new_role:
         return (
-            jsonify(
-                success=False,
-                message="Username and role are required",
-            ),
+            jsonify(success=False,
+                    message="Username and role are required"),
             400,
         )
 
-    user_data = current_app.users_db.get(username)
-    if not user_data:
-        return jsonify(success=False, message="User not found"), 404
-
-    user_data["meta"]["role"] = new_role
-    current_app.users_db.update({username: user_data})
-
-    return jsonify(success=True)
+    ok, msg = current_app.auth.change_user_role(username, new_role)
+    status = 200 if ok else 404
+    return jsonify(success=ok, message=msg), status
 
 
 def update_user_theme():
@@ -240,7 +251,7 @@ def update_user_theme():
 
 def delete_user():
     """Delete a user from the system."""
-    payload = request.get_json()
+    payload = request.get_json() or {}
     username = payload.get("username")
 
     if not username:
@@ -249,14 +260,67 @@ def delete_user():
     if username not in current_app.users_db:
         return jsonify(success=False, message="User not found"), 404
 
-    del current_app.users_db[username]
+    current_app.auth.delete_user(username)
 
     user_dir = os.path.join(current_app.utils.USERS_DIR, username)
     if os.path.exists(user_dir):
-        shutil.rmtree(user_dir)
+        shutil.rmtree(user_dir, ignore_errors=True)
 
     return jsonify(success=True)
 
+# ===================== Auth providers =====================
+
+def list_providers():
+    """List all configured auth providers (secrets redacted)."""
+    return jsonify(
+        success=True,
+        providers=current_app.auth.list_providers(redact=True),
+    )
+
+def add_provider():
+    """Create or update an auth provider."""
+    payload = request.get_json() or {}
+    provider_id = (payload.get("id") or "").strip()
+    ptype = payload.get("type")
+
+    if not provider_id or not ptype:
+        return (
+            jsonify(success=False,
+                    message="Provider id and type are required"),
+            400,
+        )
+    try:
+        current_app.auth.upsert_provider(
+            provider_id=provider_id,
+            ptype=ptype,
+            enabled=payload.get("enabled", True),
+            priority=payload.get("priority", 100),
+            config=payload.get("config", {}),
+        )
+    except ValueError as exc:
+        return jsonify(success=False, message=str(exc)), 400
+    return jsonify(success=True)
+
+def delete_provider():
+    """Delete an auth provider."""
+    payload = request.get_json() or {}
+    provider_id = payload.get("id")
+    if not provider_id:
+        return jsonify(success=False, message="Provider id required"), 400
+    try:
+        current_app.auth.delete_provider(provider_id)
+    except ValueError as exc:
+        return jsonify(success=False, message=str(exc)), 400
+    return jsonify(success=True)
+
+def test_provider():
+    """Test connectivity for a provider."""
+    payload = request.get_json() or {}
+    provider_id = payload.get("id")
+    ok, message = current_app.auth.test_provider(provider_id)
+    return jsonify(success=ok, message=message)
+
+# ===================== Blueprints =====================
 
 def load_blueprints():
     """Scan, validate, and register blueprints."""

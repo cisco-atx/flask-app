@@ -15,7 +15,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 # Application constants
-APP_VERSION = "1.1.0"
+APP_VERSION = "1.2.0"
 DEPLOYMENT_STAGE = "dev"
 
 # Path to Azure AI environment configuration file
@@ -31,14 +31,7 @@ SESSION_LIFETIME_MINUTES = 30
 # Security configuration
 SECRET_KEY = os.getenv("SECRET_KEY", "atx_secret")
 if SECRET_KEY == "atx_secret":
-    logger.warning("Using default SECRET_KEY; consider setting a secure "
-                   "value in environment variables.")
-
-# Authentication parameters
-AUTH_PARAMS = {
-    "mode": os.getenv("AUTH_MODE", "local"),
-}
-logger.info("Authentication mode set to '%s'.", AUTH_PARAMS["mode"])
+    logger.warning("Using default SECRET_KEY; consider setting a secure value in environment variables.")
 
 # Endpoints that do not require user authentication
 EXEMPT_ENDPOINTS = {

@@ -497,21 +497,23 @@ document.addEventListener("DOMContentLoaded", () => {
                     orderable: false,
                     render: () => `
                      <div class="superadmin-only" style="display: flex; gap: 10px; justify-content: center;">
+                        <button class="edit-user icon-text">
+                            <span class="material-icons">edit_square</span>
+                            <span>Edit</span>
+                        </button>
                         <button class="change-role icon-text">
                             <span class="material-icons">person_edit</span>
                             <span>Change Role</span>
                         </button>
-                        ${AUTH_MODE === 'local' ? `
                         <button class="delete-user icon-text">
                             <span class="material-icons">delete</span>
                             <span>Delete</span>
                         </button>
-                         ` : ''}
                      </div>`
                 }
             ],
             drawCallback: function () {
-                document.querySelectorAll('.change-role, .delete-user').forEach(button => {
+                document.querySelectorAll('.edit-user, .change-role, .delete-user').forEach(button => {
                     button.style.display = (CURRENT_USERROLE === 'superadmin') ? '' : 'none';
                 });
             }
@@ -538,16 +540,31 @@ document.addEventListener("DOMContentLoaded", () => {
         userTable.ajax.reload(null, false);
     });
 
+    // Provider-aware Add User: password applies only to the local provider.
+    function isLocalProvider(providerId) {
+        return providerId === 'local';
+    }
+
+    // Toggle password field requirement/visibility based on provider choice.
+    $('#newUserProvider').on('change', function () {
+        const local = isLocalProvider($(this).val());
+        $('#newPassword').prop('required', local);
+        $('#newPassword').closest('label').toggle(local);
+        $('#newPassword').toggle(local);
+    });
+
     // Add user
     $('#addUserForm').on('submit', function (e) {
         e.preventDefault();
+        const provider = $('#newUserProvider').val() || 'local';
         const formData = {
             username: $('#newUsername').val().trim(),
-            password: $('#newPassword').val(),
+            password: isLocalProvider(provider) ? $('#newPassword').val() : null,
             role: $('input[name="role"]:checked').val(),
             email: $('#newEmail').val().trim(),
             firstname: $('#newFirstName').val().trim(),
-            lastname: $('#newLastName').val().trim()
+            lastname: $('#newLastName').val().trim(),
+            auth_provider: provider
         };
 
         $.ajax({
@@ -563,8 +580,65 @@ document.addEventListener("DOMContentLoaded", () => {
                 $('#addUserModalOverlay').hide();
                 userTable.ajax.reload(null, false);
             },
-            error: function () {
-                alert('User creation failed');
+            error: function (err) {
+                alert(err.responseJSON?.message || 'User creation failed');
+            }
+        });
+    });
+
+    // Edit local user: open modal pre-filled, submit profile/role/password.
+    const editUserModalOverlay = document.getElementById('editUserModalOverlay');
+
+    safeAddListener(document.getElementById('closeEditUserModal'), 'click', () => {
+        editUserModalOverlay.style.display = 'none';
+    });
+
+    $('#userTable').on('click', '.edit-user', function () {
+        const row = userTable.row($(this).closest('tr')).data();
+        $.getJSON('/api/users', function (resp) {
+            const data = (resp.users || {})[row.username] || {};
+            const profile = data.profile || {};
+            const clean = (v) => (!v || v === 'NA') ? '' : v;
+
+            $('#editUsername').val(row.username);
+            $('#editFirstName').val(clean(profile.firstname));
+            $('#editLastName').val(clean(profile.lastname));
+            $('#editEmail').val(clean(profile.email));
+            $('#editPassword').val('');
+
+            // Password only meaningful for local-provider users.
+            const isLocal = (data.meta || {}).auth_provider === 'local';
+            $('#editPassword').closest('label').toggle(isLocal);
+            $('#editPassword').toggle(isLocal);
+
+            editUserModalOverlay.style.display = 'flex';
+        });
+    });
+
+    $('#editUserForm').on('submit', function (e) {
+        e.preventDefault();
+        const payload = {
+            username: $('#editUsername').val(),
+            firstname: $('#editFirstName').val().trim(),
+            lastname: $('#editLastName').val().trim(),
+            email: $('#editEmail').val().trim(),
+            password: $('#editPassword').val()  // blank => unchanged
+        };
+        $.ajax({
+            url: '/api/user/update',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(payload),
+            success: function (resp) {
+                if (!resp.success) {
+                    alert(resp.message || 'Update failed');
+                    return;
+                }
+                editUserModalOverlay.style.display = 'none';
+                userTable.ajax.reload(null, false);
+            },
+            error: function (err) {
+                alert(err.responseJSON?.message || 'Update failed');
             }
         });
     });
@@ -816,6 +890,268 @@ document.addEventListener("DOMContentLoaded", () => {
             },
             error: function () {
                 alert('Delete failed');
+            }
+        });
+    });
+
+    /**
+     * Auth provider management:
+     * DataTable listing + add/edit/test/delete with type-aware config fields.
+     * Secret fields are never returned populated (server redacts to
+     * "********"); leaving them blank on edit preserves the stored secret.
+     */
+    const PROVIDER_FIELDS = {
+        local:  [],
+        ldap:   ["host", "base_dn", "user_attr", "user_dn_tmpl", "bind_dn", "bind_password", "use_ssl"],
+        ad:     ["host", "domain", "base_dn", "bind_dn", "bind_password", "use_ssl"],
+        radius: ["host", "port", "secret", "dictionary", "nas_identifier"],
+        ssh:    ["host", "port"],
+        sso:    ["sso_provider"]
+    };
+
+    const PROVIDER_LABELS = {
+        local: "Local",
+        ldap: "LDAP",
+        ad: "Active Directory",
+        radius: "RADIUS",
+        ssh: "SSH",
+        sso: "SSO"
+    };
+
+    const PROVIDER_SECRET_FIELDS = ["bind_password", "secret"];
+
+    const PROVIDER_FIELD_LABELS = {
+        host:           "Host",
+        port:           "Port",
+        base_dn:        "Base DN",
+        user_attr:      "User Attribute",
+        user_dn_tmpl:   "User DN Template",
+        bind_dn:        "Bind DN",
+        bind_password:  "Bind Password",
+        use_ssl:        "Use SSL",
+        domain:         "Domain",
+        secret:         "Shared Secret",
+        dictionary:     "Dictionary Path",
+        nas_identifier: "NAS Identifier",
+        sso_provider:   "SSO Provider"
+    };
+
+    function providerFieldLabel(field) {
+        // Fall back to a title-cased version of the raw key if unmapped.
+        return PROVIDER_FIELD_LABELS[field]
+            || field.replace(/_/g, ' ')
+                    .replace(/\b\w/g, c => c.toUpperCase());
+    }
+
+    let providerTable = null;
+
+    function initProviderTable() {
+        if (providerTable) return;
+        providerTable = $('#providerTable').DataTable({
+            searching: false,
+            paging: false,
+            info: false,
+            responsive: true,
+            scrollY: "60vh",
+            scrollCollapse: true,
+            ajax: {
+                url: '/api/providers',
+                dataSrc: resp => (resp.success ? resp.providers : [])
+            },
+            columns: [
+                { data: 'id' },
+                { data: 'type', render: v => PROVIDER_LABELS[v] || v },
+                {
+                    data: 'enabled',
+                    render: v => v
+                        ? '<span class="badge status-pass"><span class="material-icons">check_circle</span><span>Enabled</span></span>'
+                        : '<span class="badge status-notrun"><span class="material-icons">cancel</span><span>Disabled</span></span>'
+                },
+                { data: 'priority' },
+                {
+                    data: null,
+                    orderable: false,
+                    render: row => `
+                     <div style="display:flex; gap:10px; justify-content:center;">
+                        <button class="edit-provider icon-text">
+                            <span class="material-icons">edit_square</span>
+                            <span>Edit</span>
+                        </button>
+                        ${row.id === 'local' ? '' : `
+                        <button class="delete-provider icon-text">
+                            <span class="material-icons">delete</span>
+                            <span>Delete</span>
+                        </button>`}
+                     </div>`
+                }
+            ]
+        });
+    }
+
+    // Initialize providers table when its tab is opened.
+    $('.app-modal-menu .menu-item[data-id="providers"]').on('click', () => {
+        initProviderTable();
+        providerTable.ajax.reload(null, false);
+    });
+
+    // Build type-specific config inputs with human-friendly labels.
+    function renderProviderConfigFields(type, config = {}) {
+        const container = $('#providerConfigFields');
+        container.empty();
+        if (type === 'local') {
+            container.append('<p>No configuration is needed for the Local provider.</p>');
+            return;
+        }
+
+        (PROVIDER_FIELDS[type] || []).forEach(field => {
+            const isSecret = PROVIDER_SECRET_FIELDS.includes(field);
+            const isBool = field === 'use_ssl';
+            const val = config[field] != null ? config[field] : '';
+            const label = providerFieldLabel(field);
+            let input;
+            if (isBool) {
+                input = `<div style="display:flex; gap:10px;" data-cfg-bool="${field}">
+                    <label>
+                        <input type="radio" name="${field}" value="true" ${val === true ? 'checked' : ''}> Yes
+                    </label>
+                    <label>
+                        <input type="radio" name="${field}" value="false" ${val === false || val === '' ? 'checked' : ''}> No
+                    </label>
+                </div>`;
+            } else {
+                input = `<input type="${isSecret ? 'password' : 'text'}"
+                                data-cfg="${field}"
+                                value="${isSecret ? '' : val}"
+                                placeholder="${isSecret ? 'leave blank to keep current' : ''}">`;
+            }
+            container.append(`<label>${label}</label>${input}`);
+        });
+    }
+
+    // Collect config from the dynamic fields (blanks omitted to keep secrets).
+    function collectProviderConfig() {
+        const config = {};
+
+        // Text and secret fields.
+        $('#providerConfigFields [data-cfg]').each(function () {
+            const key = $(this).data('cfg');
+            const v = $(this).val();
+            if (v !== '') config[key] = v;
+        });
+
+        // Boolean (radio) fields.
+        $('#providerConfigFields [data-cfg-bool]').each(function () {
+            const key = $(this).data('cfg-bool');
+            const selected = $(this).find(`input[name="${key}"]:checked`).val();
+            if (selected !== undefined) {
+                config[key] = (selected === 'true');
+            }
+        });
+
+        return config;
+    }
+
+    // Re-render config fields when the provider type changes.
+    $('#providerType').on('change', function () {
+        renderProviderConfigFields($(this).val());
+    });
+
+    // Add provider.
+    $('#addProvider').on('click', () => {
+        $('#providerForm')[0].reset();
+        $('#providerId').prop('readonly', false);
+        $('#providerType').prop('disabled', false).val('ldap');
+        $('#providerEnabled').prop('checked', true);
+        $('#providerPriority').val(100);
+        $('#providerModalTitle').text('Add Provider');
+        renderProviderConfigFields('ldap');
+        $('#providerModalOverlay').css('display', 'flex');
+    });
+
+    safeAddListener(document.getElementById('closeProviderModal'), 'click', () => {
+        $('#providerModalOverlay').hide();
+    });
+
+    // Edit provider.
+    $('#providerTable').on('click', '.edit-provider', function () {
+        const row = providerTable.row($(this).closest('tr')).data();
+        $('#providerId').val(row.id).prop('readonly', true);
+        $('#providerType').val(row.type).prop('disabled', true);
+        $('#providerEnabled').prop('checked', !!row.enabled);
+        $('#providerPriority').val(row.priority);
+        $('#providerModalTitle').text('Edit Provider');
+        renderProviderConfigFields(row.type, row.config || {});
+        $('#providerModalOverlay').css('display', 'flex');
+    });
+
+    // Save provider (add or edit).
+    $('#providerForm').on('submit', function (e) {
+        e.preventDefault();
+        const payload = {
+            id: $('#providerId').val().trim(),
+            type: $('#providerType').val(),
+            enabled: $('#providerEnabled').is(':checked'),
+            priority: parseInt($('#providerPriority').val(), 10) || 100,
+            config: collectProviderConfig()
+        };
+        console.log(payload)
+        $.ajax({
+            url: '/api/provider',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(payload),
+            success: function (resp) {
+                if (!resp.success) {
+                    alert(resp.message || 'Save failed');
+                    return;
+                }
+                $('#providerModalOverlay').hide();
+                providerTable.ajax.reload(null, false);
+            },
+            error: function (err) {
+                alert(err.responseJSON?.message || 'Save failed');
+            }
+        });
+    });
+
+    // Test provider connectivity.
+    $('#testProviderBtn').on('click', function () {
+        const id = $('#providerId').val().trim();
+        if (!id) {
+            alert('Save the provider first, then test.');
+            return;
+        }
+        const btn = $(this);
+        btn.prop('disabled', true);
+        $.ajax({
+            url: '/api/provider/test',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ id }),
+            success: resp => alert((resp.success ? 'OK: ' : 'FAILED: ') + resp.message),
+            error: () => alert('Test failed'),
+            complete: () => btn.prop('disabled', false)
+        });
+    });
+
+    // Delete provider.
+    $('#providerTable').on('click', '.delete-provider', function () {
+        const row = providerTable.row($(this).closest('tr')).data();
+        if (!confirm(`Delete provider "${row.id}"?`)) return;
+        $.ajax({
+            url: '/api/provider',
+            method: 'DELETE',
+            contentType: 'application/json',
+            data: JSON.stringify({ id: row.id }),
+            success: function (resp) {
+                if (!resp.success) {
+                    alert(resp.message || 'Delete failed');
+                    return;
+                }
+                providerTable.ajax.reload(null, false);
+            },
+            error: function (err) {
+                alert(err.responseJSON?.message || 'Delete failed');
             }
         });
     });

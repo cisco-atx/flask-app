@@ -21,27 +21,18 @@ from flask import (
 
 
 def render_login():
-    """Render login page and handle authentication logic."""
-    auth_params = current_app.utils.AUTH_PARAMS
-
+    """Render login page and authenticate via the user's bound provider."""
     if request.method == "POST":
         username = request.form["username"]
         password = request.form["password"]
 
-        auth_kwargs = {}
-
-        if auth_params["mode"] == "ssh":
-            auth_kwargs["host"] = auth_params["host"]
-
-        elif auth_params["mode"] == "sso":
-            auth_kwargs["token"] = password
-            auth_kwargs["provider"] = auth_params.get("sso_provider")
-            password = None
+        # Optional explicit provider hint from the login form.
+        provider_id = request.form.get("provider")
 
         success = current_app.auth.authenticate(
             username=username,
             password=password,
-            **auth_kwargs,
+            provider_id=provider_id,
         )
 
         if not success:
@@ -49,7 +40,6 @@ def render_login():
             return redirect(url_for("atx.render_login"))
 
         current_app.set_authenticated_user(username)
-
         flash("Login successful!", "success")
         return redirect(url_for("atx.render_home"))
 
@@ -57,7 +47,7 @@ def render_login():
 
 
 def render_register():
-    """Render registration page and handle user registration."""
+    """Render registration page; self-registration is local-only."""
     if request.method == "POST":
         firstname = request.form["firstname"].strip()
         lastname = request.form["lastname"].strip()
@@ -69,6 +59,7 @@ def render_register():
             username=username,
             password=password,
             role="user",
+            auth_provider="local",
             profile={
                 "email": email,
                 "firstname": firstname,
@@ -86,10 +77,8 @@ def render_register():
 
 
 def logout():
-    """Log out the user and clear session."""
+    """Log out the user and clear the session."""
     reason = request.args.get("reason")
-    user = session.get("username")
-
     session.clear()
 
     if reason:

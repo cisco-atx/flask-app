@@ -43,12 +43,8 @@ class FlaskApp(Flask):
         self.utils = utils
 
         self.secret_key = self.utils.SECRET_KEY
-        self.azureai = self.modules.AzureAIClient(
-            self.utils.AZURE_AI_ENV_PATH
-        )
-        self.cipher = self.modules.PasswordCipher(
-            key_file=self.utils.CIPHER_KEY
-        )
+        self.azureai = self.modules.AzureAIClient(self.utils.AZURE_AI_ENV_PATH)
+        self.cipher = self.modules.PasswordCipher(key_file=self.utils.CIPHER_KEY)
 
         self.setup_server_instance()
         self.setup_directories()
@@ -87,15 +83,18 @@ class FlaskApp(Flask):
         logger.info("Initializing databases.")
         self.bp_db = SqliteDict(self.utils.BP_DB, autocommit=True)
         self.users_db = SqliteDict(self.utils.USERS_DB, autocommit=True)
+        self.providers_db = SqliteDict(self.utils.PROVIDERS_DB, autocommit=True)
 
     def setup_auth(self):
         """Initialize the authentication manager."""
         logger.info("Setting up authentication manager.")
         self.auth = self.modules.AuthManager(
             users_db=self.users_db,
+            providers_db=self.providers_db,
             base_dir=self.utils.USERS_DIR,
-            mode=self.utils.AUTH_PARAMS.get("mode"),
+            cipher=self.cipher,
         )
+        self.auth.migrate_users()
         self.auth.setup_bootstrap_admin()
 
     def set_authenticated_user(self, username):
@@ -139,7 +138,7 @@ class FlaskApp(Flask):
         def inject_base_globals():
             return {
                 "app_version": self.utils.APP_VERSION,
-                "auth_params": self.utils.AUTH_PARAMS,
+                "auth_providers": self.auth.list_providers(redact=True),
                 "deployment_stage": self.utils.DEPLOYMENT_STAGE,
             }
 

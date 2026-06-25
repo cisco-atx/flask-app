@@ -25,7 +25,7 @@
 <script>
     const CURRENT_USERNAME = "{{ session.get('username') }}";
     const CURRENT_USERROLE = "{{ session.get('userdata', {}).get('meta', {}).get('role') }}";
-    const AUTH_MODE = "{{ auth_params.mode }}";
+    const CURRENT_USER_PROVIDER = "{{ session.get('userdata', {}).get('meta', {}).get('auth_provider') }}";
 </script>
 {% endblock %}
 
@@ -203,6 +203,16 @@
                 <span class="material-icons">settings_account_box</span>
                 <span>Users</span>
             </div>
+
+            <!-- Auth Providers Tab -->
+            <div
+                    class="menu-item superadmin-only"
+                    data-id="providers"
+                    data-title="Auth Providers"
+            >
+                <span class="material-icons">vpn_key</span>
+                <span>Auth Providers</span>
+            </div>
         </div>
 
         <!-- Modal Content Area -->
@@ -254,39 +264,15 @@
                 <!-- ===================== -->
                 <section class="app-modal-section" id="usersSection">
 
-                    <!-- User Actions & Auth Info -->
-                    <div style="display: flex; justify-content: flex-start; height: 30px;">
-
-                        {% if auth_params.mode == "local" %}
-                        <!-- Add User Button (Local Auth Only) -->
-                        <button class="icon-text superadmin-only" id="addUser">
+                    {% if auth_providers | selectattr('id', 'equalto', 'local') | selectattr('enabled') | list %}
+                    <!-- Add User Button -->
+                    <div style="display: flex; justify-content: flex-start;">
+                        <button class="icon-text" id="addUser">
                             <span class="material-icons">person_add</span>
                             Add User
                         </button>
-                        {% endif %}
-
-                        <!-- Authentication Mode Display -->
-                        <div class="login-mode-container">
-                            <div style="font-weight:600;">Auth:</div>
-
-                            {% if auth_params.mode == "local" %}
-                            <div title="Use your local application credentials to log in">
-                                Local
-                            </div>
-
-                            {% elif auth_params.mode == "ssh" %}
-                            <div title="Login requires access to SSH host: {{ auth_params.host }}">
-                                SSH:{{ auth_params.host }}:22
-                            </div>
-
-                            {% elif auth_params.mode == "sso" %}
-                            <div title="Login using your {{ auth_params.provider }} account">
-                                SSO: ({{ auth_params.sso_provider }})
-                            </div>
-                            {% endif %}
-                        </div>
-
                     </div>
+                    {% endif %}
 
                     <!-- Users Table -->
                     <table class="display" id="userTable" style="width:100%">
@@ -305,6 +291,34 @@
 
                 </section>
 
+                <!-- ===================== -->
+                <!-- Auth Providers Section -->
+                <!-- ===================== -->
+                <section class="app-modal-section superadmin-only" id="providersSection">
+
+                    <!-- Add Provider Button -->
+                    <div style="display: flex; justify-content: flex-start;">
+                        <button class="icon-text" id="addProvider">
+                            <span class="material-icons">add</span>
+                            Add Provider
+                        </button>
+                    </div>
+
+                    <!-- Providers Table -->
+                    <table class="display" id="providerTable" style="width:100%">
+                        <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Type</th>
+                            <th>Enabled</th>
+                            <th>Priority</th>
+                            <th>Action</th>
+                        </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+
+                </section>
             </div>
         </div>
     </div>
@@ -343,7 +357,7 @@
                 <!-- Upload Directory -->
                 <div class="form-grid" style="grid-template-columns: max-content 1fr auto;">
                     <label style="width: 90px;">Directory</label>
-                    <input type="text" id="appDir" placeholder="/path/to/app-directory"readonly>
+                    <input type="text" id="appDir" placeholder="/path/to/app-directory" readonly>
                     <button type="button" id="uploadAppBtn" class="icon-text">
                         <span class="material-icons">upload</span>
                         Upload
@@ -428,6 +442,15 @@
                         <input type="radio" name="role" value="superadmin"> Super Admin
                     </label>
                 </div>
+                <span></span>
+
+                <!-- Provider Selection -->
+                <label>Provider</label>
+                <select id="newUserProvider">
+                    {% for p in auth_providers if p.enabled %}
+                    <option value="{{ p.id }}">{{ p.id }} ({{ p.type }})</option>
+                    {% endfor %}
+                </select>
                 <span></span>
 
             </form>
@@ -588,8 +611,8 @@
                         >
                         <span></span>
 
-                        {% if auth_params.mode == "local" %}
-                        <!-- Change Password -->
+                        {% if session.get('userdata', {}).get('meta', {}).get('auth_provider') == 'local' %}
+                        <!-- Change Password (local-provider users only) -->
                         <label>Change Password</label>
                         <input
                                 type="password"
@@ -646,6 +669,138 @@
                 </section>
 
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===================== -->
+<!-- Provider Modal (Add / Edit) -->
+<!-- ===================== -->
+<div class="simple-modal-overlay superadmin-only" id="providerModalOverlay">
+    <div class="simple-modal-container" style="width: 640px;">
+
+        <!-- Header -->
+        <div class="simple-modal-header">
+            <h5 class="simple-modal-title" id="providerModalTitle">Add Provider</h5>
+            <button class="close" id="closeProviderModal">
+                <span class="material-icons">close</span>
+            </button>
+        </div>
+
+        <!-- Body -->
+        <div class="simple-modal-body">
+            <form
+                    class="form-grid"
+                    id="providerForm"
+                    style="grid-template-columns: max-content 1fr;"
+            >
+                <label>Provider ID</label>
+                <input type="text" id="providerId" required>
+
+                <label>Type</label>
+                <select id="providerType">
+                    <option value="local">Local</option>
+                    <option value="ldap">LDAP</option>
+                    <option value="ad">Active Directory</option>
+                    <option value="radius">RADIUS</option>
+                    <option value="ssh">SSH</option>
+                    <option value="sso">SSO</option>
+                </select>
+
+                <label>Priority</label>
+                <input type="number" id="providerPriority" value="100">
+
+                <span></span>
+                <div style="display: flex; gap: 8px; padding: 8px 0;">
+                    <input type="checkbox" style="width:auto" id="providerEnabled" checked>
+                    <label>Enabled</label>
+                </div>
+            </form>
+
+            <hr style="margin:15px 0;">
+
+            <!-- Type-specific config fields injected by JS -->
+            <h4 style="margin-bottom:12px; font-size:12px;">Provider Configuration</h4>
+            <div
+                    id="providerConfigFields"
+                    class="form-grid"
+                    style="grid-template-columns: max-content 1fr;"
+            ></div>
+        </div>
+
+        <!-- Footer -->
+        <div class="simple-modal-footer">
+            <button type="button" class="icon-text" id="testProviderBtn">
+                <span class="material-icons">network_check</span>
+                Test
+            </button>
+            <button type="submit" class="icon-text" form="providerForm">
+                <span class="material-icons">save</span>
+                Save
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ===================== -->
+<!-- Edit Local User Modal -->
+<!-- ===================== -->
+<div class="simple-modal-overlay superadmin-only" id="editUserModalOverlay">
+    <div class="simple-modal-container" style="width: 500px;">
+
+        <!-- Header -->
+        <div class="simple-modal-header">
+            <h5 class="simple-modal-title">Edit User</h5>
+            <button class="close" id="closeEditUserModal">
+                <span class="material-icons">close</span>
+            </button>
+        </div>
+
+        <!-- Body -->
+        <div class="simple-modal-body">
+            <form
+                    class="form-grid"
+                    id="editUserForm"
+                    style="grid-template-columns: max-content 1fr auto;"
+            >
+                <label>Username</label>
+                <input type="text" id="editUsername" readonly>
+                <span></span>
+
+                <label>First Name</label>
+                <input type="text" id="editFirstName">
+                <span></span>
+
+                <label>Last Name</label>
+                <input type="text" id="editLastName">
+                <span></span>
+
+                <label>Email</label>
+                <input type="email" id="editEmail">
+                <span></span>
+
+                <label>Password</label>
+                <input
+                        type="password"
+                        id="editPassword"
+                        placeholder="Leave blank to keep current"
+                >
+                <button
+                        type="button"
+                        class="toggle-password icon-only"
+                        data-target="#editPassword"
+                >
+                    <span class="material-icons">visibility</span>
+                </button>
+            </form>
+        </div>
+
+        <!-- Footer -->
+        <div class="simple-modal-footer">
+            <button type="submit" class="icon-text" form="editUserForm">
+                <span class="material-icons">save</span>
+                Save
+            </button>
         </div>
     </div>
 </div>

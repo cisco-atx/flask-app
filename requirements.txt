@@ -10,4 +10,6 @@ xlsxwriter
 xlrd
 textdistance
 networkx
+ldap3
+pyrad
 git+https://github.com/cisco-netmig/core-netcore.git#egg=netcore
