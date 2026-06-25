@@ -49,13 +49,37 @@ This approach enables rapid development, simplified maintenance, and consistent 
 
 ### Authentication and Authorization
 
-ATX provides a centralized authentication framework supporting multiple authentication models including:
+ATX provides a centralized, multi-provider authentication framework. Multiple authentication providers can be configured and operated **concurrently**, allowing the platform to integrate with diverse enterprise identity sources at the same time.
 
-* Local authentication
-* SSH-based authentication
-* Single Sign-On integration
+Supported provider types include:
 
-Role-based access controls allow administrators to manage user permissions across deployed applications.
+* **Local** — built-in account store with encrypted credential management
+* **LDAP** — directory authentication via simple or service-account bind
+* **Active Directory** — domain authentication via NTLM bind
+* **RADIUS** — network access authentication
+* **SSH** — host-based authentication
+* **SSO** — single sign-on integration
+
+#### Provider Management
+
+Authentication providers are managed at runtime through the administration interface. Administrators can:
+
+* Add, edit, enable, disable, and delete providers
+* Assign each provider a **priority** within the authentication stack
+* Securely store provider configuration, with sensitive fields (bind passwords, shared secrets) encrypted at rest
+* Validate provider connectivity using a built-in connection test
+
+Provider configuration is persisted independently of the platform code, so the authentication model can evolve without redeployment.
+
+#### Per-User Provider Binding
+
+Each user account is bound to the provider it was registered or first authenticated under. On subsequent logins, the user is authenticated against that same provider, ensuring stable and predictable identity resolution.
+
+For users not yet known to the platform (for example, directory accounts logging in for the first time), ATX walks the enabled providers in priority order; the first provider to successfully authenticate **claims** the user, provisions their workspace, and binds them to that provider for future logins. The built-in Local provider is never auto-claimed, as local accounts are created explicitly by administrators.
+
+#### Role-Based Access Control
+
+Role-based access controls (user, admin, superadmin) allow administrators to manage permissions across the platform and deployed applications. A bootstrap administrator is available on a fresh deployment to perform initial setup, and is automatically retired once additional accounts exist.
 
 ---
 
@@ -63,11 +87,14 @@ Role-based access controls allow administrators to manage user permissions acros
 
 The platform includes built-in user lifecycle management including:
 
-* User registration
-* User provisioning
-* Role assignment
+* User registration and provisioning
+* Provider-aware account creation
+* Role assignment and modification
+* Local user credential management (create, edit, delete)
 * Workspace creation
 * Session management
+
+Local users are managed directly within the platform, including encrypted password storage. Users backed by external providers (LDAP, Active Directory, RADIUS) remain governed by their source directory, with the platform storing only the binding and profile metadata.
 
 Each user receives an isolated workspace for reports, artifacts, and application-generated outputs.
 
@@ -181,7 +208,7 @@ Applications inherit a common operational model and user interface.
 
 ### Secure by Design
 
-Includes credential encryption, session management, and access controls.
+Includes credential encryption, encrypted provider secrets, multi-provider enterprise authentication, session management, and role-based access controls.
 
 ### Extensible Architecture
 
