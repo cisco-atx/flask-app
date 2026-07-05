@@ -1381,37 +1381,26 @@ document.addEventListener("DOMContentLoaded", () => {
      */
     const mainLayout = document.getElementById("mainLayout");
     const sidebar = document.getElementById("sidebar");
-    const sidebarToggle = document.getElementById("sidebarToggle");
 
-    if (sidebar && sidebarToggle) {
-        const icon = sidebarToggle.querySelector(".material-icons");
-        const SIDEBAR_STATE = "atx_sidebar_collapsed";
+    if (sidebar && mainLayout) {
 
-        // Restore saved state
-        const savedState = localStorage.getItem(SIDEBAR_STATE);
-        const isCollapsed = savedState === "true";
+        const expandSidebar = () => {
+            sidebar.classList.remove("collapsed");
+            mainLayout.classList.add("sidebar-expanded");
+            mainLayout.classList.remove("sidebar-collapsed");
+        };
 
-        sidebar.classList.toggle("collapsed", isCollapsed);
-        mainLayout.classList.toggle("sidebar-collapsed", isCollapsed);
-        mainLayout.classList.toggle("sidebar-expanded", !isCollapsed);
+        const collapseSidebar = () => {
+            sidebar.classList.add("collapsed");
+            mainLayout.classList.add("sidebar-collapsed");
+            mainLayout.classList.remove("sidebar-expanded");
+        };
 
-        icon.textContent = isCollapsed
-            ? "chevron_right"
-            : "chevron_left";
+        // Expand on Hover
+        sidebar.addEventListener("mouseenter", expandSidebar);
 
-        // Toggle sidebar
-        sidebarToggle.addEventListener("click", () => {
-            const collapsed = sidebar.classList.toggle("collapsed");
-
-            mainLayout.classList.toggle("sidebar-collapsed", collapsed);
-            mainLayout.classList.toggle("sidebar-expanded", !collapsed);
-
-            icon.textContent = collapsed
-                ? "chevron_right"
-                : "chevron_left";
-
-            localStorage.setItem(SIDEBAR_STATE, collapsed);
-        });
+        // Collapse when mouse leaves
+        sidebar.addEventListener("mouseleave", collapseSidebar);
     }
 
 

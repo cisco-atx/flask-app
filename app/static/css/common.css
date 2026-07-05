@@ -799,6 +799,7 @@ form label {
   height: calc(100vh - 60px);
   overflow: auto;
   padding: 6px 10px;
+  transition: margin-left 0.3s ease;
 }
 
 /* -------------------- (Atx) Sidebar -------------------- */
@@ -806,7 +807,9 @@ form label {
   width: 260px;
   background: var(--background-color-secondary);
   border-right: 1px solid var(--border-color);
-  transition: width 0.3s ease;
+  transition: width 0.3s ease, padding 0.3s ease;
+  overflow-x: hidden;
+  z-index: 1000;
 }
 
 .sidebar-toggle {
@@ -834,7 +837,7 @@ form label {
 
 .sidebar.collapsed {
   width: 60px;
-  padding-left: 1px;
+  padding-left: 0;
 }
 
 .sidebar.collapsed ~ .sidebar-toggle {
@@ -843,20 +846,22 @@ form label {
 
 .sidebar.collapsed .menu-item span:not(.material-icons) {
   display: none;
+  opacity: 0;
 }
 
 main.sidebar-expanded .logger-dock {
-  left: 259px;
+  left: 260px;
 }
 
 main.sidebar-collapsed .logger-dock {
-  left: 58px;
+  left: 60px;
 }
 
 .sidebar.collapsed .menu-item {
   justify-content: center;
-  padding-left: 10px;
+  padding-left: 0;
 }
+
 
 /* -------------------- (Atx) Breadcrumb -------------------- */
 .breadcrumb {

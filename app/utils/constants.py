@@ -15,7 +15,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 # Application constants
-APP_VERSION = "1.2.0"
+APP_VERSION = "2.1.0"
 DEPLOYMENT_STAGE = "dev"
 
 # Path to Azure AI environment configuration file
