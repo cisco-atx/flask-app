@@ -859,9 +859,8 @@ main.sidebar-collapsed .logger-dock {
 
 .sidebar.collapsed .menu-item {
   justify-content: center;
-  padding-left: 0;
+  padding-left: 10px;
 }
-
 
 /* -------------------- (Atx) Breadcrumb -------------------- */
 .breadcrumb {
