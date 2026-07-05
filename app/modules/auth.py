@@ -315,6 +315,10 @@ class RADIUSAuth(BaseAuthBackend):
             req["User-Password"] = req.PwCrypt(password)
             if self.config.get("nas_identifier"):
                 req["NAS-Identifier"] = self.config["nas_identifier"]
+
+            if hasattr(req, "add_message_authenticator"):
+                req.add_message_authenticator()
+
             reply = client.SendPacket(req)
             return reply.code == packet.AccessAccept
         except Exception:
