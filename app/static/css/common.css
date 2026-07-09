@@ -844,9 +844,15 @@ form label {
   left: 58px;
 }
 
-.sidebar.collapsed .menu-item span:not(.material-icons) {
+/* Collapse only the sidebar's own menu items — never modal menus */
+.sidebar.collapsed .menu-item:not(.app-modal-menu *) span:not(.material-icons) {
   display: none;
   opacity: 0;
+}
+
+.sidebar.collapsed .menu-item:not(.app-modal-menu *) {
+  justify-content: center;
+  padding-left: 10px;
 }
 
 main.sidebar-expanded .logger-dock {
@@ -855,11 +861,6 @@ main.sidebar-expanded .logger-dock {
 
 main.sidebar-collapsed .logger-dock {
   left: 60px;
-}
-
-.sidebar.collapsed .menu-item {
-  justify-content: center;
-  padding-left: 10px;
 }
 
 /* -------------------- (Atx) Breadcrumb -------------------- */
