@@ -611,6 +611,77 @@ form label {
   font-size: var(--font-size-sm);
 }
 
+/* -------------------- (Atx) Notification Bar -------------------- */
+.notification-bar {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.notification-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    font-size: var(--font-size-sm);
+    border-bottom: 1px solid var(--border-color);
+    animation: notif-slide-down 0.2s ease-out;
+}
+
+.notification-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.notification-message {
+    flex: 1;
+    line-height: 1.4;
+}
+
+.notification-message strong {
+    margin-right: 4px;
+}
+
+.notification-close {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    opacity: 0.7;
+    flex-shrink: 0;
+    color: inherit;
+}
+
+.notification-close:hover {
+    opacity: 1;
+}
+
+.notification-info {
+    background: var(--badge-info-bg);
+    color: var(--badge-info-color);
+}
+
+.notification-warning {
+    background: var(--badge-warning-bg);
+    color: var(--badge-warning-color);
+}
+
+.notification-maintenance {
+    background: var(--badge-debug-bg);
+    color: var(--badge-debug-color);
+}
+
+.notification-critical {
+    background: var(--badge-critical-bg);
+    color: var(--badge-critical-color);
+}
+
+@keyframes notif-slide-down {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
 /* -------------------- (Atx) Login/Register -------------------- */
 .login-register-container {
   display: flex;

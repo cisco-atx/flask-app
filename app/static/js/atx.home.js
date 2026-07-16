@@ -74,6 +74,100 @@ document.addEventListener("DOMContentLoaded", () => {
         toggleTheme();
     });
 
+
+    /**
+     * Notification / Announcement banner:
+     * Renders dismissible banners fed by /api/notifications. Dismissed IDs
+     * persist in localStorage (unless the notification is persistent) so
+     * they don't reappear on reload. Type drives styling via badge tokens.
+     */
+    const notificationBar = document.getElementById("notificationBar");
+    const DISMISSED_NOTIFICATIONS_KEY = "dismissed_notifications";
+
+    const NOTIFICATION_ICONS = {
+        info: "info",
+        warning: "warning",
+        maintenance: "build",
+        critical: "error"
+    };
+
+    function getDismissedNotifications() {
+        try {
+            return JSON.parse(localStorage.getItem(DISMISSED_NOTIFICATIONS_KEY)) || [];
+        } catch {
+            return [];
+        }
+    }
+
+    function dismissNotification(id) {
+        const dismissed = getDismissedNotifications();
+        if (!dismissed.includes(id)) {
+            dismissed.push(id);
+            localStorage.setItem(
+                DISMISSED_NOTIFICATIONS_KEY,
+                JSON.stringify(dismissed)
+            );
+        }
+    }
+
+    function renderNotification(note) {
+        const type = note.type || "info";
+        const icon = NOTIFICATION_ICONS[type] || "info";
+
+        const banner = document.createElement("div");
+        banner.className = `notification-item notification-${type}`;
+        banner.dataset.id = note.id;
+
+        banner.innerHTML = `
+            <span class="material-icons notification-icon">${icon}</span>
+            <div class="notification-message">
+                ${note.title ? `<strong>${note.title}</strong> ` : ""}
+                <span>${note.message}</span>
+            </div>
+            <button class="notification-close icon-only" title="Dismiss">
+                <span class="material-icons">close</span>
+            </button>
+        `;
+
+        banner.querySelector(".notification-close").addEventListener("click", () => {
+            if (!note.persistent) {
+                dismissNotification(note.id);
+            }
+            banner.remove();
+        });
+
+        notificationBar.appendChild(banner);
+    }
+
+    function loadNotifications() {
+        if (!notificationBar) return;
+
+        fetch("/api/notifications")
+            .then(resp => resp.json())
+            .then(data => {
+                if (!data.success) return;
+                const notes = data.notifications || [];
+                const dismissed = getDismissedNotifications();
+
+                // Prune stale dismissed IDs no longer served by the backend.
+                const activeIds = new Set(notes.map(n => n.id));
+                const prunedDismissed = dismissed.filter(id => activeIds.has(id));
+                if (prunedDismissed.length !== dismissed.length) {
+                    localStorage.setItem(
+                        DISMISSED_NOTIFICATIONS_KEY,
+                        JSON.stringify(prunedDismissed)
+                    );
+                }
+
+                notes
+                    .filter(note => note.persistent || !prunedDismissed.includes(note.id))
+                    .forEach(renderNotification);
+            })
+            .catch(err => console.error("Failed to load notifications:", err));
+    }
+
+    loadNotifications();
+
     /**
      * User account menu: Toggles the visibility of the user account dropdown menu and handles clicks outside to close it.
      */
@@ -890,6 +984,176 @@ document.addEventListener("DOMContentLoaded", () => {
             },
             error: function () {
                 alert('Delete failed');
+            }
+        });
+    });
+
+    /**
+     * Notification management (admin):
+     * DataTable listing + add/edit/delete of announcement banners.
+     */
+    let notificationTable = null;
+
+    function initNotificationTable() {
+        if (notificationTable) return;
+        notificationTable = $('#notificationTable').DataTable({
+            searching: false,
+            paging: false,
+            info: false,
+            responsive: true,
+            scrollY: "60vh",
+            scrollCollapse: true,
+            ajax: {
+                url: '/api/notifications/all',
+                dataSrc: resp => (resp.success ? resp.notifications : [])
+            },
+            columns: [
+                {
+                    data: 'type',
+                    render: v => {
+                        const map = {
+                            info: 'badge status-info',
+                            warning: 'badge status-warning',
+                            maintenance: 'badge',
+                            critical: 'badge status-critical'
+                        };
+                        return `<span class="${map[v] || 'badge'}">${v}</span>`;
+                    }
+                },
+                { data: 'title', render: v => v || '—' },
+                {
+                    data: 'message',
+                    render: v => v.length > 60 ? v.slice(0, 60) + '…' : v
+                },
+                { data: 'priority' },
+                {
+                    data: 'enabled',
+                    render: v => v
+                        ? '<span class="badge status-pass"><span class="material-icons">check_circle</span><span>Enabled</span></span>'
+                        : '<span class="badge status-notrun"><span class="material-icons">cancel</span><span>Disabled</span></span>'
+                },
+                {
+                    data: 'expires_at',
+                    render: v => {
+                        if (!v) return 'Never';
+                        return new Date(v).toLocaleString('en-GB', {
+                            day: '2-digit', month: 'short', year: 'numeric',
+                            hour: '2-digit', minute: '2-digit'
+                        });
+                    }
+                },
+                {
+                    data: null,
+                    orderable: false,
+                    render: () => `
+                     <div style="display:flex; gap:10px; justify-content:center;">
+                        <button class="edit-notification icon-text">
+                            <span class="material-icons">edit_square</span>
+                            <span>Edit</span>
+                        </button>
+                        <button class="delete-notification icon-text">
+                            <span class="material-icons">delete</span>
+                            <span>Delete</span>
+                        </button>
+                     </div>`
+                }
+            ]
+        });
+    }
+
+    // Initialize when the Notifications tab is opened.
+    $('.app-modal-menu .menu-item[data-id="notifications"]').on('click', () => {
+        initNotificationTable();
+        notificationTable.ajax.reload(null, false);
+    });
+
+    const notificationModalOverlay = document.getElementById('notificationModalOverlay');
+
+    safeAddListener(document.getElementById('closeNotificationModal'), 'click', () => {
+        notificationModalOverlay.style.display = 'none';
+    });
+
+    // Add
+    $('#addNotification').on('click', () => {
+        $('#notificationForm')[0].reset();
+        $('#notificationId').val('');
+        $('#notificationType').val('info');
+        $('#notificationPriority').val(0);
+        $('#notificationEnabled').prop('checked', true);
+        $('#notificationPersistent').prop('checked', false);
+        $('#notificationModalTitle').text('Add Notification');
+        notificationModalOverlay.style.display = 'flex';
+    });
+
+    // Edit
+    $('#notificationTable').on('click', '.edit-notification', function () {
+        const row = notificationTable.row($(this).closest('tr')).data();
+        $('#notificationId').val(row.id);
+        $('#notificationType').val(row.type);
+        $('#notificationTitleInput').val(row.title || '');
+        $('#notificationMessage').val(row.message || '');
+        $('#notificationPriority').val(row.priority || 0);
+        $('#notificationEnabled').prop('checked', !!row.enabled);
+        $('#notificationPersistent').prop('checked', !!row.persistent);
+        // datetime-local wants "YYYY-MM-DDTHH:MM"
+        $('#notificationExpiresAt').val(
+            row.expires_at ? row.expires_at.slice(0, 16) : ''
+        );
+        $('#notificationModalTitle').text('Edit Notification');
+        notificationModalOverlay.style.display = 'flex';
+    });
+
+    // Save (add or edit)
+    $('#notificationForm').on('submit', function (e) {
+        e.preventDefault();
+        const payload = {
+            id: $('#notificationId').val() || undefined,
+            type: $('#notificationType').val(),
+            title: $('#notificationTitleInput').val().trim(),
+            message: $('#notificationMessage').val().trim(),
+            priority: parseInt($('#notificationPriority').val(), 10) || 0,
+            enabled: $('#notificationEnabled').is(':checked'),
+            persistent: $('#notificationPersistent').is(':checked'),
+            expires_at: $('#notificationExpiresAt').val() || null
+        };
+
+        $.ajax({
+            url: '/api/notification',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(payload),
+            success: function (resp) {
+                if (!resp.success) {
+                    alert(resp.message || 'Save failed');
+                    return;
+                }
+                notificationModalOverlay.style.display = 'none';
+                notificationTable.ajax.reload(null, false);
+            },
+            error: function (err) {
+                alert(err.responseJSON?.message || 'Save failed');
+            }
+        });
+    });
+
+    // Delete
+    $('#notificationTable').on('click', '.delete-notification', function () {
+        const row = notificationTable.row($(this).closest('tr')).data();
+        if (!confirm(`Delete notification "${row.title || row.message}"?`)) return;
+        $.ajax({
+            url: '/api/notification',
+            method: 'DELETE',
+            contentType: 'application/json',
+            data: JSON.stringify({ id: row.id }),
+            success: function (resp) {
+                if (!resp.success) {
+                    alert(resp.message || 'Delete failed');
+                    return;
+                }
+                notificationTable.ajax.reload(null, false);
+            },
+            error: function (err) {
+                alert(err.responseJSON?.message || 'Delete failed');
             }
         });
     });

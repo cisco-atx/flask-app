@@ -76,6 +76,11 @@
 </header>
 
 <!-- ===================== -->
+<!-- Notification / Announcement Banner -->
+<!-- ===================== -->
+<section class="notification-bar" id="notificationBar"></section>
+
+<!-- ===================== -->
 <!-- Main Layout Container -->
 <!-- ===================== -->
 <main id="mainLayout">
@@ -199,6 +204,16 @@
                 <span>Users</span>
             </div>
 
+            <!-- Notifications Tab -->
+            <div
+                    class="menu-item admin-only"
+                    data-id="notifications"
+                    data-title="Notifications"
+            >
+                <span class="material-icons">campaign</span>
+                <span>Notifications</span>
+            </div>
+
             <!-- Auth Providers Tab -->
             <div
                     class="menu-item superadmin-only"
@@ -278,6 +293,37 @@
                             <th>Role</th>
                             <th>Email</th>
                             <th>Last Login</th>
+                            <th>Action</th>
+                        </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+
+                </section>
+
+                <!-- ===================== -->
+                <!-- Notifications Section -->
+                <!-- ===================== -->
+                <section class="app-modal-section admin-only" id="notificationsSection">
+
+                    <!-- Add Notification Button -->
+                    <div style="display: flex; justify-content: flex-start;">
+                        <button class="icon-text" id="addNotification">
+                            <span class="material-icons">add_alert</span>
+                            Add Notification
+                        </button>
+                    </div>
+
+                    <!-- Notifications Table -->
+                    <table class="display" id="notificationTable" style="width:100%">
+                        <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Title</th>
+                            <th>Message</th>
+                            <th>Priority</th>
+                            <th>Enabled</th>
+                            <th>Expires</th>
                             <th>Action</th>
                         </tr>
                         </thead>
@@ -664,6 +710,74 @@
                 </section>
 
             </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ===================== -->
+<!-- Notification Modal (Add / Edit) -->
+<!-- ===================== -->
+<div class="simple-modal-overlay admin-only" id="notificationModalOverlay">
+    <div class="simple-modal-container" style="width: 560px;">
+
+        <!-- Header -->
+        <div class="simple-modal-header">
+            <h5 class="simple-modal-title" id="notificationModalTitle">Add Notification</h5>
+            <button class="close" id="closeNotificationModal">
+                <span class="material-icons">close</span>
+            </button>
+        </div>
+
+        <!-- Body -->
+        <div class="simple-modal-body">
+            <form
+                    class="form-grid"
+                    id="notificationForm"
+                    style="grid-template-columns: max-content 1fr;"
+            >
+                <input type="hidden" id="notificationId">
+
+                <label>Type</label>
+                <select id="notificationType">
+                    <option value="info">Info</option>
+                    <option value="warning">Warning</option>
+                    <option value="maintenance">Maintenance</option>
+                    <option value="critical">Critical</option>
+                </select>
+
+                <label>Title</label>
+                <input type="text" id="notificationTitleInput" placeholder="Optional">
+
+                <label>Message</label>
+                <textarea id="notificationMessage" rows="3" style="height:300px; resize:none;" required></textarea>
+
+                <label>Priority</label>
+                <input type="number" id="notificationPriority" value="0">
+
+                <label>Expires At</label>
+                <input type="datetime-local" id="notificationExpiresAt">
+
+                <span></span>
+                <div style="display:flex; gap:16px; padding:8px 0;">
+                    <label style="display:flex; align-items:center; gap:6px;">
+                        <input type="checkbox" style="width:auto" id="notificationEnabled" checked>
+                        Enabled
+                    </label>
+                    <label style="display:flex; align-items:center; gap:6px;">
+                        <input type="checkbox" style="width:auto" id="notificationPersistent">
+                        Persistent (cannot be permanently dismissed)
+                    </label>
+                </div>
+            </form>
+        </div>
+
+        <!-- Footer -->
+        <div class="simple-modal-footer">
+            <button type="submit" class="icon-text" form="notificationForm">
+                <span class="material-icons">save</span>
+                Save
+            </button>
         </div>
     </div>
 </div>

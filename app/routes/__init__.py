@@ -10,7 +10,14 @@ File path: app/routes/__init__.py
 from flask import redirect, url_for
 
 # Importing view functions for rendering pages and handling user activity.
-from .base import activity, render_home
+from .base import (
+    activity,
+    render_home,
+    get_notifications,
+    list_notifications,
+    save_notification,
+    delete_notification
+)
 
 # Importing API views for user, provider, and connector management.
 from .api import (
@@ -88,6 +95,30 @@ routes = [
         "endpoint": "atx.sse_activity",
         "view_func": activity,
         "methods": ["GET"],
+    },
+    {
+        "rule": "/api/notifications",
+        "endpoint": "atx.api_get_notifications",
+        "view_func": login_required(get_notifications),
+        "methods": ["GET"],
+    },
+    {
+        "rule": "/api/notifications/all",
+        "endpoint": "atx.api_list_notifications",
+        "view_func": admin_required(list_notifications),
+        "methods": ["GET"],
+    },
+    {
+        "rule": "/api/notification",
+        "endpoint": "atx.api_save_notification",
+        "view_func": admin_required(save_notification),
+        "methods": ["POST"],
+    },
+    {
+        "rule": "/api/notification",
+        "endpoint": "atx.api_delete_notification",
+        "view_func": admin_required(delete_notification),
+        "methods": ["DELETE"],
     },
     {
         "rule": "/api/update_profile",

@@ -84,6 +84,7 @@ class FlaskApp(Flask):
         self.bp_db = SqliteDict(self.utils.BP_DB, autocommit=True)
         self.users_db = SqliteDict(self.utils.USERS_DB, autocommit=True)
         self.providers_db = SqliteDict(self.utils.PROVIDERS_DB, autocommit=True)
+        self.notifications_db = SqliteDict(self.utils.NOTIFICATIONS_DB, autocommit=True)
 
     def setup_auth(self):
         """Initialize the authentication manager."""
