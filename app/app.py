@@ -51,6 +51,7 @@ class FlaskApp(Flask):
         self.setup_db()
         self.setup_auth()
         self.setup_routes()
+        self.setup_extensions()
         self.setup_blueprints()
         self.setup_global_logger()
         self.inject_globals()
@@ -116,6 +117,10 @@ class FlaskApp(Flask):
         for route in self.routes.routes:
             self.add_url_rule(**route)
 
+    def setup_extensions(self):
+        self.socketio = self.modules.socketio
+        self.socketio.init_app(self)
+
     def setup_blueprints(self):
         """Load and register blueprints."""
         logger.info("Loading and registering blueprints.")
@@ -145,6 +150,10 @@ class FlaskApp(Flask):
 
     def enforce_session_policies(self):
         """Enforce session security and authentication policies."""
+
+        if request.path.startswith("/socket.io"):
+            return
+
         endpoint = request.endpoint
 
         if endpoint in self.utils.EXEMPT_ENDPOINTS:

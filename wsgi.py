@@ -7,11 +7,10 @@ for development purposes.
 File path: wsgi.py
 """
 from app.app import FlaskApp
+from app.modules.extensions import socketio
 
 # Initialize the Flask application
 app = FlaskApp()
 
 if __name__ == "__main__":
-    """Run the Flask development server."""
-    # Run the application on all available IPs with debugging enabled
-    app.run(debug=True, use_reloader=False)
+    socketio.run(app, debug=True, use_reloader=False)

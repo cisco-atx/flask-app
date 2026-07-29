@@ -93,9 +93,14 @@
         <div class="layout-with-sidebar">
 
             <!-- Sidebar Navigation -->
-            <aside class="sidebar open" id="sidebar">
+            <aside class="sidebar" id="sidebar">
                 {% block sidebar %}{% endblock %}
             </aside>
+
+            <!-- Sidebar Toggle Button (round, appears on hover) -->
+            <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
+                <span class="material-icons">chevron_left</span>
+            </button>
 
             <!-- Main Content Section -->
             <section class="main-content" id="mainContent">

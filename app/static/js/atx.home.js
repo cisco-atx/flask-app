@@ -1638,13 +1638,17 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-
     /**
      * Sidebar toggle:
-     * Handles collapse/expand state and saves to localStorage
+     * - Toggles collapse/expand on button click
+     * - Persists state to localStorage
+     * - Restores state on load
      */
     const mainLayout = document.getElementById("mainLayout");
     const sidebar = document.getElementById("sidebar");
+    const sidebarToggle = document.getElementById("sidebarToggle");
+
+    const SIDEBAR_STATE_KEY = "atx.sidebar.collapsed";
 
     if (sidebar && mainLayout) {
 
@@ -1660,11 +1664,26 @@ document.addEventListener("DOMContentLoaded", () => {
             mainLayout.classList.remove("sidebar-expanded");
         };
 
-        // Expand on Hover
-        sidebar.addEventListener("mouseenter", expandSidebar);
+        const applyState = (collapsed) => {
+            if (collapsed) {
+                collapseSidebar();
+            } else {
+                expandSidebar();
+            }
+        };
 
-        // Collapse when mouse leaves
-        sidebar.addEventListener("mouseleave", collapseSidebar);
+        // Restore saved state on load (defaults to expanded)
+        const savedCollapsed = localStorage.getItem(SIDEBAR_STATE_KEY) === "true";
+        applyState(savedCollapsed);
+
+        // Toggle on button click
+        if (sidebarToggle) {
+            sidebarToggle.addEventListener("click", () => {
+                const willCollapse = !sidebar.classList.contains("collapsed");
+                applyState(willCollapse);
+                localStorage.setItem(SIDEBAR_STATE_KEY, String(willCollapse));
+            });
+        }
     }
 
 

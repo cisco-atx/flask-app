@@ -927,17 +927,30 @@ form label {
   align-items: center;
   justify-content: center;
   top: 50%;
-  left: 258px;
-  transform: translateY(-50%);
-  width: 30px;
-  height: 60px;
-  border-radius: 0 10px 10px 0;
+  left: 259px;
+  transform: translate(-50%, -50%);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
   border: 1px solid var(--border-color);
-  border-left: none;
   background: var(--background-color-secondary);
-  z-index: 100;
+  color: inherit;
+  z-index: 1100;
   cursor: pointer;
-  transition: left 0.3s ease;
+  opacity: 0;
+  visibility: hidden;
+  transition: left 0.3s ease, opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.sidebar-toggle .material-icons {
+  font-size: 22px;
+  transition: transform 0.3s ease;
+}
+
+.sidebar:hover ~ .sidebar-toggle,
+.sidebar-toggle:hover {
+  opacity: 1;
+  visibility: visible;
 }
 
 .sidebar .menu-item {
@@ -950,10 +963,13 @@ form label {
 }
 
 .sidebar.collapsed ~ .sidebar-toggle {
-  left: 58px;
+  left: 60px;
 }
 
-/* Collapse only the sidebar's own menu items — never modal menus */
+.sidebar.collapsed ~ .sidebar-toggle .material-icons {
+  transform: rotate(180deg);        /* chevron_left -> points right */
+}
+
 .sidebar.collapsed .menu-item:not(.app-modal-menu *) span:not(.material-icons) {
   display: none;
   opacity: 0;
